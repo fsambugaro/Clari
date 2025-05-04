@@ -1,4 +1,3 @@
-```python
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -11,8 +10,7 @@ st.title("📊 Dashboard Pipeline LATAM")
 def load_data_from_file(file) -> pd.DataFrame:
     df = pd.read_csv(file)
     df.columns = df.columns.str.strip()
-    df["Sales Team Member"] = df.get("Sales Team Member", df.get("Owner",""))
-    df["Sales Team Member"] = df["Sales Team Member"].astype(str).str.strip()
+    df["Sales Team Member"] = df.get("Sales Team Member", df.get("Owner","")).astype(str).str.strip()
     df["Stage"] = df["Stage"].astype(str).str.strip()
     df["Close Date"] = pd.to_datetime(df["Close Date"], errors="coerce")
     df["Total New ASV"] = (
@@ -23,15 +21,15 @@ def load_data_from_file(file) -> pd.DataFrame:
     return df
 
 # 1) Upload do CSV
-df = None
 uploaded = st.file_uploader("📥 Envie seu CSV de pipeline", type="csv")
-if uploaded:
-    df = load_data_from_file(uploaded)
-else:
+if not uploaded:
     st.info("Por favor, faça o upload do seu arquivo CSV para prosseguir.")
     st.stop()
 
-# 2) Filtro inicial por Sales Team Member
+# 2) Carrega dados via uploader
+df = load_data_from_file(uploaded)
+
+# 3) Filtro inicial por Sales Team Member
 members = ["Todos"] + sorted(df["Sales Team Member"].unique())
 selected_member = st.selectbox("👤 Filtrar por Sales Team Member:", members)
 if selected_member != "Todos":
@@ -40,7 +38,7 @@ if selected_member != "Todos":
 else:
     st.subheader("Visão geral (todos os membros)")
 
-# 3) Filtros adicionais
+# 4) Filtros adicionais
 st.subheader("⚙️ Filtros adicionais")
 ignore = [
     "Sales Team Member","Stage","Close Date","Total New ASV",
@@ -58,11 +56,8 @@ for i in range(0, len(filter_cols), cols_per_row):
             if sel:
                 df = df[df[col].isin(sel)]
 
-# 4) Gráficos
-
-# Pipeline por Fase
+# 5) Pipeline por Fase
 st.header("🔍 Pipeline por Fase")
-st.write(f"Filtrado por: {selected_member}")
 ordered_stages = [
     "02 - Prospect","03 - Opportunity Qualification",
     "05 - Solution Definition and Validation","06 - Customer Commit",
@@ -83,7 +78,7 @@ fig1 = px.bar(
 )
 st.plotly_chart(fig1, use_container_width=True)
 
-# Pipeline Mensal
+# 6) Pipeline Mensal
 st.header("📈 Pipeline Mensal")
 temp = df.dropna(subset=["Close Date"]).copy()
 temp["Month"] = temp["Close Date"].dt.to_period("M").dt.to_timestamp()
@@ -94,7 +89,7 @@ fig2 = px.line(
 )
 st.plotly_chart(fig2, use_container_width=True)
 
-# Ranking de Membros
+# 7) Ranking de Membros
 st.header("🏆 Ranking de Membros da Equipe")
 rk = (
     df.groupby("Sales Team Member", as_index=False)["Total New ASV"]
@@ -109,7 +104,7 @@ fig3 = px.bar(
 )
 st.plotly_chart(fig3, use_container_width=True)
 
-# Forecast Indicator
+# 8) Forecast Indicator
 st.header("📊 Forecast Indicator")
 if "Forecast Indicator" in df.columns:
     fc = df.groupby("Forecast Indicator", as_index=False)["Total New ASV"].sum()
@@ -123,7 +118,7 @@ if "Forecast Indicator" in df.columns:
 else:
     st.info("Coluna 'Forecast Indicator' ausente.")
 
-# Licensing Program Type
+# 9) Licensing Program Type
 st.header("📊 Licensing Program Type")
 if "Licensing Program Type" in df.columns:
     lpt = df.groupby("Licensing Program Type", as_index=False)["Total New ASV"].sum()
@@ -137,7 +132,7 @@ if "Licensing Program Type" in df.columns:
 else:
     st.info("Coluna 'Licensing Program Type' ausente.")
 
-# Licensing Program
+# 10) Licensing Program
 st.header("📊 Licensing Program")
 if "Licensing Program" in df.columns:
     lp = df.groupby("Licensing Program", as_index=False)["Total New ASV"].sum()
@@ -151,7 +146,7 @@ if "Licensing Program" in df.columns:
 else:
     st.info("Coluna 'Licensing Program' ausente.")
 
-# Major OLPG1
+# 11) Major OLPG1
 st.header("📊 Major OLPG1")
 if "Major OLPG1" in df.columns:
     mo = df.groupby("Major OLPG1", as_index=False)["Total New ASV"].sum()
@@ -165,7 +160,6 @@ if "Major OLPG1" in df.columns:
 else:
     st.info("Coluna 'Major OLPG1' ausente.")
 
-# Dados Brutos
+# 12) Dados Brutos
 st.header("📋 Dados Brutos")
 st.dataframe(df)
-```
