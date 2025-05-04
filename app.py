@@ -11,11 +11,11 @@ st.title("📊 Dashboard Pipeline LATAM")
 GITHUB_API = "https://api.github.com"
 REPO_OWNER = "fsambugaro"
 REPO_NAME = "Clari"
-CSV_DIR = ""  # use subpasta se necessário
+CSV_DIR = ""  # ajustar se os CSVs estiverem em subpasta
 
 @st.cache_data
 def list_csv_files():
-    """Lista arquivos CSV do repositório via API."""
+    """Lista arquivos CSV do repositório via API do GitHub."""
     url = f"{GITHUB_API}/repos/{REPO_OWNER}/{REPO_NAME}/contents/{CSV_DIR}"
     resp = requests.get(url)
     resp.raise_for_status()
@@ -24,14 +24,13 @@ def list_csv_files():
 
 @st.cache_data
 def load_and_sanitize(filename: str) -> pd.DataFrame:
-    """Carrega CSV do raw GitHub e sanitiza as colunas."""
+    """Carrega CSV do raw do GitHub e sanitiza colunas."""
     raw_url = f"https://raw.githubusercontent.com/{REPO_OWNER}/{REPO_NAME}/main/{CSV_DIR}{filename}"
     df = pd.read_csv(raw_url)
     df.columns = df.columns.str.strip()
     df['Sales Team Member'] = df.get('Sales Team Member', df.get('Owner','')).astype(str).str.strip()
     df['Stage'] = df['Stage'].astype(str).str.strip()
     df['Close Date'] = pd.to_datetime(df['Close Date'], errors='coerce')
-    # Sanitiza valor
     df['Total New ASV'] = (
         df['Total New ASV'].astype(str)
           .str.replace(r"[\$,]", '', regex=True)
@@ -39,12 +38,12 @@ def load_and_sanitize(filename: str) -> pd.DataFrame:
     )
     return df
 
-# 1) Seleção de arquivo CSV
+# 1) Seleção de CSV
 st.sidebar.header('📂 Selecione o arquivo CSV')
 csv_files = list_csv_files()
 selected_file = st.sidebar.selectbox('Arquivos disponíveis:', [''] + csv_files)
 if not selected_file:
-    st.info('Por favor, selecione um arquivo CSV para carregar.')
+    st.info('Selecione um arquivo CSV para continuar.')
     st.stop()
 
 # 2) Carrega dados
@@ -52,25 +51,24 @@ df = load_and_sanitize(selected_file)
 
 # 3) Filtros na sidebar
 st.sidebar.header('🔍 Filtros')
-# Filtro por Sales Team Member
-members = ['Todos'] + sorted(df['Sales Team Member'].unique())
-selected_member = st.sidebar.selectbox('Sales Team Member', members)
+# Sales Team Member
+distinct_members = ['Todos'] + sorted(df['Sales Team Member'].unique())
+selected_member = st.sidebar.selectbox('Sales Team Member:', distinct_members)
 if selected_member != 'Todos':
-    df = df[df['Sales Team Member'] == selected_member]
-
+    df = df[df['Sales Team Member']==selected_member]
 # Filtros adicionais
-global_ignore = ['Sales Team Member','Stage','Close Date','Total New ASV',
-                 'Record Owner','Account Name 1','Currency','Opportunity ID',
-                 'Opportunity Currency','Clari Score']
-for col in [c for c in df.columns if c not in global_ignore]:
-    opts = df[col].dropna().unique().tolist()
-    sel = st.sidebar.multiselect(col, opts)
+ignore_cols = ['Sales Team Member','Stage','Close Date','Total New ASV',
+               'Record Owner','Account Name 1','Currency','Opportunity ID',
+               'Opportunity Currency','Clari Score']
+for col in [c for c in df.columns if c not in ignore_cols]:
+    choices = df[col].dropna().unique().tolist()
+    sel = st.sidebar.multiselect(col, choices)
     if sel:
         df = df[df[col].isin(sel)]
 
 # 4) Pipeline por Fase
 st.header('🔍 Pipeline por Fase')
-st.write(f'Arquivo: **{selected_file}** | Filtrado por: **{selected_member}**')
+st.write(f'Arquivo: **{selected_file}** | Filtrado: **{selected_member}**')
 stages_order = [
     '02 - Prospect','03 - Opportunity Qualification',
     '05 - Solution Definition and Validation','06 - Customer Commit',
@@ -91,9 +89,9 @@ st.plotly_chart(fig1, use_container_width=True)
 
 # 5) Pipeline Mensal
 st.header('📈 Pipeline Mensal')
-tmp = df.dropna(subset=['Close Date']).copy()
-tmp['Month'] = tmp['Close Date'].dt.to_period('M').dt.to_timestamp()
-monthly = tmp.groupby('Month')['Total New ASV'].sum().reset_index()
+temp = df.dropna(subset=['Close Date']).copy()
+temp['Month'] = temp['Close Date'].dt.to_period('M').dt.to_timestamp()
+monthly = temp.groupby('Month')['Total New ASV'].sum().reset_index()
 fig2 = px.line(
     monthly, x='Month', y='Total New ASV', markers=True,
     template='plotly_dark', title='Pipeline ao Longo do Tempo', text='Total New ASV'
@@ -103,10 +101,7 @@ st.plotly_chart(fig2, use_container_width=True)
 
 # 6) Ranking de Membros da Equipe
 st.header('🏆 Ranking de Membros da Equipe')
-rk = (
-    df.groupby('Sales Team Member', as_index=False)['Total New ASV']
-      .sum().sort_values('Total New ASV', ascending=False)
-)
+rk = df.groupby('Sales Team Member', as_index=False)['Total New ASV'].sum().sort_values('Total New ASV', ascending=False)
 rk['Total New ASV'] = rk['Total New ASV'].map('${:,.2f}'.format)
 st.table(rk)
 
@@ -117,12 +112,10 @@ if 'Forecast Indicator' in df.columns:
     fig3 = px.bar(
         fc, x='Forecast Indicator', y='Total New ASV',
         color='Forecast Indicator', color_discrete_sequence=px.colors.qualitative.Vivid,
-        template='plotly_dark', text='Total New ASV'
+        template='plotly_dark', title='Pipeline por Forecast Indicator', text='Total New ASV'
     )
     fig3.update_traces(texttemplate='%{text:,.2f}', textposition='inside')
     st.plotly_chart(fig3, use_container_width=True)
-else:
-    st.info("Coluna 'Forecast Indicator' ausente.")
 else:
     st.info("Coluna 'Forecast Indicator' ausente.")
 
@@ -133,12 +126,10 @@ if 'Licensing Program Type' in df.columns:
     fig4 = px.bar(
         lt, x='Licensing Program Type', y='Total New ASV',
         color='Licensing Program Type', color_discrete_sequence=px.colors.qualitative.Vivid,
-        template='plotly_dark', text='Total New ASV'
+        template='plotly_dark', title='Pipeline por Licensing Program Type', text='Total New ASV'
     )
     fig4.update_traces(texttemplate='%{text:,.2f}', textposition='inside')
     st.plotly_chart(fig4, use_container_width=True)
-else:
-    st.info("Coluna 'Licensing Program Type' ausente.")
 else:
     st.info("Coluna 'Licensing Program Type' ausente.")
 
@@ -149,12 +140,10 @@ if 'Licensing Program' in df.columns:
     fig5 = px.bar(
         lp, x='Licensing Program', y='Total New ASV',
         color='Licensing Program', color_discrete_sequence=px.colors.qualitative.Vivid,
-        template='plotly_dark', text='Total New ASV'
+        template='plotly_dark', title='Pipeline por Licensing Program', text='Total New ASV'
     )
     fig5.update_traces(texttemplate='%{text:,.2f}', textposition='inside')
     st.plotly_chart(fig5, use_container_width=True)
-else:
-    st.info("Coluna 'Licensing Program' ausente.")
 else:
     st.info("Coluna 'Licensing Program' ausente.")
 
@@ -165,12 +154,10 @@ if 'Major OLPG1' in df.columns:
     fig6 = px.bar(
         mo, x='Major OLPG1', y='Total New ASV',
         color='Major OLPG1', color_discrete_sequence=px.colors.qualitative.Vivid,
-        template='plotly_dark', text='Total New ASV'
+        template='plotly_dark', title='Pipeline por Major OLPG1', text='Total New ASV'
     )
     fig6.update_traces(texttemplate='%{text:,.2f}', textposition='inside')
     st.plotly_chart(fig6, use_container_width=True)
-else:
-    st.info("Coluna 'Major OLPG1' ausente.")
 else:
     st.info("Coluna 'Major OLPG1' ausente.")
 
