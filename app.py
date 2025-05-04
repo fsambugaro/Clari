@@ -7,15 +7,17 @@ st.set_page_config(page_title="Dashboard Pipeline LATAM", layout="wide")
 st.title("📊 Dashboard Pipeline LATAM")
 
 @st.cache_data
+# Carrega e sanitiza os dados do CSV enviado
 def load_data_from_file(file) -> pd.DataFrame:
     df = pd.read_csv(file)
     df.columns = df.columns.str.strip()
-    df["Sales Team Member"] = df.get("Sales Team Member", df.get("Owner","")).astype(str).str.strip()
+    df["Sales Team Member"] = df.get("Sales Team Member", df.get("Owner",""
+    )).astype(str).str.strip()
     df["Stage"] = df["Stage"].astype(str).str.strip()
     df["Close Date"] = pd.to_datetime(df["Close Date"], errors="coerce")
     df["Total New ASV"] = (
         df["Total New ASV"].astype(str)
-           .str.replace(r"[\$,]","",regex=True)
+           .str.replace(r"[\$,]","", regex=True)
            .astype(float)
     )
     return df
@@ -72,13 +74,19 @@ stage_data["Stage"] = pd.Categorical(
     stage_data["Stage"], categories=ordered_stages, ordered=True
 )
 fig1 = px.bar(
-    stage_data, x="Total New ASV", y="Stage",
-    orientation="h", color="Stage",
+    stage_data,
+    x="Total New ASV", y="Stage",
+    orientation="h",
+    color="Stage",
     color_discrete_sequence=px.colors.qualitative.Vivid,
-    template="plotly_dark", title="Pipeline por Fase",
+    template="plotly_dark",
+    title="Pipeline por Fase",
     text="Total New ASV"
 )
-fig1.update_traces(texttemplate="%{text:,.2f}", textposition="inside")
+fig1.update_traces(
+    texttemplate="%{text:,.2f}",
+    textposition="inside"
+)
 st.plotly_chart(fig1, use_container_width=True)
 
 # 6) Pipeline Mensal
@@ -87,19 +95,23 @@ temp = df.dropna(subset=["Close Date"]).copy()
 temp["Month"] = temp["Close Date"].dt.to_period("M").dt.to_timestamp()
 monthly = temp.groupby("Month")["Total New ASV"].sum().reset_index()
 fig2 = px.line(
-    monthly, x="Month", y="Total New ASV",
-    markers=True, template="plotly_dark", title="Pipeline ao Longo do Tempo"
+    monthly,
+    x="Month", y="Total New ASV",
+    markers=True,
+    template="plotly_dark",
+    title="Pipeline ao Longo do Tempo"
 )
+# Label no line (opcional)
+fig2.update_traces(texttemplate="%{y:,.2f}", textposition="top center")
 st.plotly_chart(fig2, use_container_width=True)
 
-# 7) Ranking de Membros da Equipe (como tabela)
+# 7) Ranking de Membros da Equipe
 st.header("🏆 Ranking de Membros da Equipe")
 rk = (
     df.groupby("Sales Team Member", as_index=False)["Total New ASV"]
-      .sum()
-      .sort_values("Total New ASV", ascending=False)
+      .sum().sort_values("Total New ASV", ascending=False)
 )
-rk["Total New ASV"] = rk["Total New ASV"].map("${:,.2f}".format)
+rk["Total New ASV"] = rk["Total New ASV"].map("{:,.2f}".format)
 st.table(rk)
 
 # 8) Distribuição de Forecast Indicator
@@ -109,8 +121,8 @@ if "Forecast Indicator" in df.columns:
     fig3 = px.bar(
         fc,
         x="Forecast Indicator", y="Total New ASV",
-        template="plotly_dark", color="Forecast Indicator",
-        title="Pipeline por Forecast Indicator",
+        template="plotly_dark",
+        color="Forecast Indicator",
         text="Total New ASV"
     )
     fig3.update_traces(texttemplate="%{text:,.2f}", textposition="inside")
@@ -124,8 +136,8 @@ if "Licensing Program Type" in df.columns:
     lt = df.groupby("Licensing Program Type", as_index=False)["Total New ASV"].sum()
     fig4 = px.bar(
         lt, x="Licensing Program Type", y="Total New ASV",
-        template="plotly_dark", color="Licensing Program Type",
-        title="Pipeline por Licensing Program Type",
+        template="plotly_dark",
+        color="Licensing Program Type",
         text="Total New ASV"
     )
     fig4.update_traces(texttemplate="%{text:,.2f}", textposition="inside")
@@ -139,8 +151,8 @@ if "Licensing Program" in df.columns:
     lp = df.groupby("Licensing Program", as_index=False)["Total New ASV"].sum()
     fig5 = px.bar(
         lp, x="Licensing Program", y="Total New ASV",
-        template="plotly_dark", color="Licensing Program",
-        title="Pipeline por Licensing Program",
+        template="plotly_dark",
+        color="Licensing Program",
         text="Total New ASV"
     )
     fig5.update_traces(texttemplate="%{text:,.2f}", textposition="inside")
@@ -154,18 +166,17 @@ if "Major OLPG1" in df.columns:
     mo = df.groupby("Major OLPG1", as_index=False)["Total New ASV"].sum()
     fig6 = px.bar(
         mo, x="Major OLPG1", y="Total New ASV",
-        template="plotly_dark", color="Major OLPG1",
-        title="Pipeline por Major OLPG1",
+        template="plotly_dark",
+        color="Major OLPG1",
         text="Total New ASV"
     )
     fig6.update_traces(texttemplate="%{text:,.2f}", textposition="inside")
     st.plotly_chart(fig6, use_container_width=True)
 else:
-    st.info("Coluna 'Major OLPG1' ausente.")    st.info("Coluna 'Major OLPG1' ausente.")
+    st.info("Coluna 'Major OLPG1' ausente.")
 
 # 12) Dados Brutos
 st.header("📋 Dados Brutos")
-# Formata Total New ASV com vírgula e ponto
 if "Total New ASV" in df.columns:
     df_display = df.copy()
     df_display["Total New ASV"] = df_display["Total New ASV"].map(lambda x: f"{x:,.2f}")
