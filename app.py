@@ -55,7 +55,12 @@ st.sidebar.header('🔍 Filtros')
 distinct_members = ['Todos'] + sorted(df['Sales Team Member'].unique())
 selected_member = st.sidebar.selectbox('Sales Team Member:', distinct_members)
 if selected_member != 'Todos':
-    df = df[df['Sales Team Member']==selected_member]
+    df = df[df['Sales Team Member'] == selected_member]
+# Sales Stage multi-seleção
+distinct_stages = sorted(df['Stage'].unique())
+selected_stages = st.sidebar.multiselect('Sales Stage:', distinct_stages, default=distinct_stages)
+if selected_stages:
+    df = df[df['Stage'].isin(selected_stages)]
 # Filtros adicionais
 ignore_cols = ['Sales Team Member','Stage','Close Date','Total New ASV',
                'Record Owner','Account Name 1','Currency','Opportunity ID',
@@ -68,7 +73,7 @@ for col in [c for c in df.columns if c not in ignore_cols]:
 
 # 4) Pipeline por Fase
 st.header('🔍 Pipeline por Fase')
-st.write(f'Arquivo: **{selected_file}** | Filtrado: **{selected_member}**')
+st.write(f'Arquivo: **{selected_file}** | Filtrado: **{selected_member}**, Stages: **{", ".join(selected_stages)}**')
 stages_order = [
     '02 - Prospect','03 - Opportunity Qualification',
     '05 - Solution Definition and Validation','06 - Customer Commit',
