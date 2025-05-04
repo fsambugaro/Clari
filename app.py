@@ -75,8 +75,10 @@ fig1 = px.bar(
     stage_data, x="Total New ASV", y="Stage",
     orientation="h", color="Stage",
     color_discrete_sequence=px.colors.qualitative.Vivid,
-    template="plotly_dark", title="Pipeline por Fase"
+    template="plotly_dark", title="Pipeline por Fase",
+    text="Total New ASV"
 )
+fig1.update_traces(texttemplate="%{text:,.2f}", textposition="inside")
 st.plotly_chart(fig1, use_container_width=True)
 
 # 6) Pipeline Mensal
