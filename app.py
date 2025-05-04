@@ -154,4 +154,10 @@ else:
 
 # 12) Dados Brutos
 st.header("📋 Dados Brutos")
-st.dataframe(df)
+# Formata Total New ASV com vírgula e ponto
+if "Total New ASV" in df.columns:
+    df_display = df.copy()
+    df_display["Total New ASV"] = df_display["Total New ASV"].map(lambda x: f"{x:,.2f}")
+    st.dataframe(df_display)
+else:
+    st.dataframe(df)
