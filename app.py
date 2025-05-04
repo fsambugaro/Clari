@@ -116,10 +116,13 @@ if 'Forecast Indicator' in df.columns:
     fc = df.groupby('Forecast Indicator', as_index=False)['Total New ASV'].sum()
     fig3 = px.bar(
         fc, x='Forecast Indicator', y='Total New ASV',
+        color='Forecast Indicator', color_discrete_sequence=px.colors.qualitative.Vivid,
         template='plotly_dark', text='Total New ASV'
     )
     fig3.update_traces(texttemplate='%{text:,.2f}', textposition='inside')
     st.plotly_chart(fig3, use_container_width=True)
+else:
+    st.info("Coluna 'Forecast Indicator' ausente.")
 else:
     st.info("Coluna 'Forecast Indicator' ausente.")
 
@@ -129,10 +132,13 @@ if 'Licensing Program Type' in df.columns:
     lt = df.groupby('Licensing Program Type', as_index=False)['Total New ASV'].sum()
     fig4 = px.bar(
         lt, x='Licensing Program Type', y='Total New ASV',
+        color='Licensing Program Type', color_discrete_sequence=px.colors.qualitative.Vivid,
         template='plotly_dark', text='Total New ASV'
     )
     fig4.update_traces(texttemplate='%{text:,.2f}', textposition='inside')
     st.plotly_chart(fig4, use_container_width=True)
+else:
+    st.info("Coluna 'Licensing Program Type' ausente.")
 else:
     st.info("Coluna 'Licensing Program Type' ausente.")
 
@@ -142,10 +148,13 @@ if 'Licensing Program' in df.columns:
     lp = df.groupby('Licensing Program', as_index=False)['Total New ASV'].sum()
     fig5 = px.bar(
         lp, x='Licensing Program', y='Total New ASV',
+        color='Licensing Program', color_discrete_sequence=px.colors.qualitative.Vivid,
         template='plotly_dark', text='Total New ASV'
     )
     fig5.update_traces(texttemplate='%{text:,.2f}', textposition='inside')
     st.plotly_chart(fig5, use_container_width=True)
+else:
+    st.info("Coluna 'Licensing Program' ausente.")
 else:
     st.info("Coluna 'Licensing Program' ausente.")
 
@@ -155,10 +164,13 @@ if 'Major OLPG1' in df.columns:
     mo = df.groupby('Major OLPG1', as_index=False)['Total New ASV'].sum()
     fig6 = px.bar(
         mo, x='Major OLPG1', y='Total New ASV',
+        color='Major OLPG1', color_discrete_sequence=px.colors.qualitative.Vivid,
         template='plotly_dark', text='Total New ASV'
     )
     fig6.update_traces(texttemplate='%{text:,.2f}', textposition='inside')
     st.plotly_chart(fig6, use_container_width=True)
+else:
+    st.info("Coluna 'Major OLPG1' ausente.")
 else:
     st.info("Coluna 'Major OLPG1' ausente.")
 
