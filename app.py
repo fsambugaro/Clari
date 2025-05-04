@@ -154,4 +154,4 @@ else:
 
 # 12) Dados Brutos
 st.header("📋 Dados Brutos")
-```
+st.dataframe(df)
