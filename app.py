@@ -75,27 +75,11 @@ fig1 = px.bar(
     stage_data, x="Total New ASV", y="Stage",
     orientation="h", color="Stage",
     color_discrete_sequence=px.colors.qualitative.Vivid,
-    template="plotly_dark", title="Pipeline por Fase",
-    text="Total New ASV"
-)
-fig1.update_traces(
-    texttemplate="%{text:,.2f}", textposition="inside"
+    template="plotly_dark", title="Pipeline por Fase"
 )
 st.plotly_chart(fig1, use_container_width=True)
 
 # 6) Pipeline Mensal
-st.header("📈 Pipeline Mensal")
-temp = df.dropna(subset=["Close Date"]).copy()
-temp["Month"] = temp["Close Date"].dt.to_period("M").dt.to_timestamp()
-monthly = temp.groupby("Month")["Total New ASV"].sum().reset_index()
-fig2 = px.line(
-    monthly, x="Month", y="Total New ASV",
-    markers=True, template="plotly_dark", title="Pipeline ao Longo do Tempo"
-)
-fig2.update_traces(
-    texttemplate="%{y:,.2f}", textposition="top center"
-)
-st.plotly_chart(fig2, use_container_width=True)
 st.header("📈 Pipeline Mensal")
 temp = df.dropna(subset=["Close Date"]).copy()
 temp["Month"] = temp["Close Date"].dt.to_period("M").dt.to_timestamp()
@@ -116,62 +100,58 @@ rk = (
 rk["Total New ASV"] = rk["Total New ASV"].map("${:,.2f}".format)
 st.table(rk)
 
-# 8) Forecast Indicator
-st.header("📊 Forecast Indicator")
+# 8) Distribuição de Forecast Indicator
+st.header("📊 Distribuição de Forecast Indicator")
 if "Forecast Indicator" in df.columns:
     fc = df.groupby("Forecast Indicator", as_index=False)["Total New ASV"].sum()
-    fig4 = px.bar(
+    fig3 = px.bar(
         fc, x="Forecast Indicator", y="Total New ASV",
-        color="Forecast Indicator",
-        color_discrete_sequence=px.colors.qualitative.Vivid,
-        template="plotly_dark", title="Pipeline por Forecast Indicator"
+        template="plotly_dark", color="Forecast Indicator",
+        title="Pipeline por Forecast Indicator"
     )
-    st.plotly_chart(fig4, use_container_width=True)
+    st.plotly_chart(fig3, use_container_width=True)
 else:
     st.info("Coluna 'Forecast Indicator' ausente.")
 
-# 9) Licensing Program Type
-st.header("📊 Licensing Program Type")
+# 9) Distribuição de Licensing Program Type
+st.header("📊 Distribuição de Licensing Program Type")
 if "Licensing Program Type" in df.columns:
-    lpt = df.groupby("Licensing Program Type", as_index=False)["Total New ASV"].sum()
-    fig5 = px.bar(
-        lpt, x="Licensing Program Type", y="Total New ASV",
-        color="Licensing Program Type",
-        color_discrete_sequence=px.colors.qualitative.Vivid,
-        template="plotly_dark", title="Pipeline por Licensing Program Type"
+    lt = df.groupby("Licensing Program Type", as_index=False)["Total New ASV"].sum()
+    fig4 = px.bar(
+        lt, x="Licensing Program Type", y="Total New ASV",
+        template="plotly_dark", color="Licensing Program Type",
+        title="Pipeline por Licensing Program Type"
     )
-    st.plotly_chart(fig5, use_container_width=True)
+    st.plotly_chart(fig4, use_container_width=True)
 else:
     st.info("Coluna 'Licensing Program Type' ausente.")
 
-# 10) Licensing Program
-st.header("📊 Licensing Program")
+# 10) Distribuição de Licensing Program
+st.header("📊 Distribuição de Licensing Program")
 if "Licensing Program" in df.columns:
     lp = df.groupby("Licensing Program", as_index=False)["Total New ASV"].sum()
-    fig6 = px.bar(
+    fig5 = px.bar(
         lp, x="Licensing Program", y="Total New ASV",
-        color="Licensing Program",
-        color_discrete_sequence=px.colors.qualitative.Vivid,
-        template="plotly_dark", title="Pipeline por Licensing Program"
+        template="plotly_dark", color="Licensing Program",
+        title="Pipeline por Licensing Program"
     )
-    st.plotly_chart(fig6, use_container_width=True)
+    st.plotly_chart(fig5, use_container_width=True)
 else:
     st.info("Coluna 'Licensing Program' ausente.")
 
-# 11) Major OLPG1
-st.header("📊 Major OLPG1")
+# 11) Distribuição de Major OLPG1
+st.header("📊 Distribuição de Major OLPG1")
 if "Major OLPG1" in df.columns:
     mo = df.groupby("Major OLPG1", as_index=False)["Total New ASV"].sum()
-    fig7 = px.bar(
+    fig6 = px.bar(
         mo, x="Major OLPG1", y="Total New ASV",
-        color="Major OLPG1",
-        color_discrete_sequence=px.colors.qualitative.Vivid,
-        template="plotly_dark", title="Pipeline por Major OLPG1"
+        template="plotly_dark", color="Major OLPG1",
+        title="Pipeline por Major OLPG1"
     )
-    st.plotly_chart(fig7, use_container_width=True)
+    st.plotly_chart(fig6, use_container_width=True)
 else:
     st.info("Coluna 'Major OLPG1' ausente.")
 
 # 12) Dados Brutos
 st.header("📋 Dados Brutos")
-st.dataframe(df)
+```
