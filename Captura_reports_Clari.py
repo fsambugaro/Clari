@@ -39,12 +39,23 @@ REPORT_URLS = {
     "Pipe LATAM FY25 full year":      "https://app.clari.com/opportunities/67f7dbf2a9815a3705a5152e",
 }
 
-# Calcula semana dentro do trimestre
-# Ano fiscal Adobe inicia em dezembro
+# Calcula semana dentro do trimestre fiscal (Adobe fiscal year começa em dezembro)
 def week_in_quarter(dt: datetime.date) -> int:
-    quarter = (dt.month - 1) // 3
-    start = datetime.date(dt.year, quarter*3 + 1, 1)
-    return ((dt - start).days // 7) + 1
+    # Ajusta mês fiscal: dezembro = 1, janeiro = 2, ..., novembro = 12
+    fiscal_month = ((dt.month - 12) % 12) + 1
+    # Ajusta ano fiscal: se mês >= dezembro, ano fiscal = ano corrente; senão ano anterior
+    fiscal_year = dt.year if dt.month == 12 else dt.year - 1
+    # Determina trimestre fiscal (0 a 3)
+    fiscal_quarter = (fiscal_month - 1) // 3
+    # Meses de início de cada trimestre fiscal: Dez(12), Mar(3), Jun(6), Sep(9)
+    start_months = [12, 3, 6, 9]
+    start_month = start_months[fiscal_quarter]
+    # Ano de início do trimestre fiscal
+    start_year = fiscal_year if start_month == 12 else fiscal_year + 1
+    # Data de início
+    start_date = datetime.date(start_year, start_month, 1)
+    # Calcula número de semanas completas desde o início do trimestre fiscal
+    return ((dt - start_date).days // 7) + 1
 
 # Função para baixar relatório via Selenium
 def download_report(driver, report_name: str, out_path: str):
@@ -135,7 +146,7 @@ def main():
 
     repo = Repo(REPO_PATH)
     repo.git.add(A=True)
-    repo.index.commit(f"Atualiza CSVs semana {week}")
+    repo.index.commit(f"Atualiza CSVs FY Week {week}")
     repo.remotes.origin.push()
     print("Relatórios atualizados e enviados ao GitHub com sucesso.")
 
