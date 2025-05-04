@@ -58,6 +58,7 @@ for i in range(0, len(filter_cols), cols_per_row):
 
 # 5) Pipeline por Fase
 st.header("🔍 Pipeline por Fase")
+st.write(f"Filtrado por: {selected_member}")
 ordered_stages = [
     "02 - Prospect","03 - Opportunity Qualification",
     "05 - Solution Definition and Validation","06 - Customer Commit",
@@ -74,11 +75,27 @@ fig1 = px.bar(
     stage_data, x="Total New ASV", y="Stage",
     orientation="h", color="Stage",
     color_discrete_sequence=px.colors.qualitative.Vivid,
-    template="plotly_dark", title="Pipeline por Fase"
+    template="plotly_dark", title="Pipeline por Fase",
+    text="Total New ASV"
+)
+fig1.update_traces(
+    texttemplate="%{text:,.2f}", textposition="inside"
 )
 st.plotly_chart(fig1, use_container_width=True)
 
 # 6) Pipeline Mensal
+st.header("📈 Pipeline Mensal")
+temp = df.dropna(subset=["Close Date"]).copy()
+temp["Month"] = temp["Close Date"].dt.to_period("M").dt.to_timestamp()
+monthly = temp.groupby("Month")["Total New ASV"].sum().reset_index()
+fig2 = px.line(
+    monthly, x="Month", y="Total New ASV",
+    markers=True, template="plotly_dark", title="Pipeline ao Longo do Tempo"
+)
+fig2.update_traces(
+    texttemplate="%{y:,.2f}", textposition="top center"
+)
+st.plotly_chart(fig2, use_container_width=True)
 st.header("📈 Pipeline Mensal")
 temp = df.dropna(subset=["Close Date"]).copy()
 temp["Month"] = temp["Close Date"].dt.to_period("M").dt.to_timestamp()
