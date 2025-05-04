@@ -89,20 +89,15 @@ fig2 = px.line(
 )
 st.plotly_chart(fig2, use_container_width=True)
 
-# 7) Ranking de Membros
+# 7) Ranking de Membros da Equipe (como tabela)
 st.header("🏆 Ranking de Membros da Equipe")
 rk = (
     df.groupby("Sales Team Member", as_index=False)["Total New ASV"]
-      .sum().sort_values("Total New ASV", ascending=False)
+      .sum()
+      .sort_values("Total New ASV", ascending=False)
 )
 rk["Total New ASV"] = rk["Total New ASV"].map("${:,.2f}".format)
-fig3 = px.bar(
-    rk, x="Total New ASV", y="Sales Team Member",
-    orientation="h", color="Sales Team Member",
-    color_discrete_sequence=px.colors.qualitative.Vivid,
-    template="plotly_dark", title="Ranking de Membros da Equipe"
-)
-st.plotly_chart(fig3, use_container_width=True)
+st.table(rk)
 
 # 8) Forecast Indicator
 st.header("📊 Forecast Indicator")
