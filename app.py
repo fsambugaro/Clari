@@ -107,10 +107,13 @@ st.header("📊 Distribuição de Forecast Indicator")
 if "Forecast Indicator" in df.columns:
     fc = df.groupby("Forecast Indicator", as_index=False)["Total New ASV"].sum()
     fig3 = px.bar(
-        fc, x="Forecast Indicator", y="Total New ASV",
+        fc,
+        x="Forecast Indicator", y="Total New ASV",
         template="plotly_dark", color="Forecast Indicator",
-        title="Pipeline por Forecast Indicator"
+        title="Pipeline por Forecast Indicator",
+        text="Total New ASV"
     )
+    fig3.update_traces(texttemplate="%{text:,.2f}", textposition="inside")
     st.plotly_chart(fig3, use_container_width=True)
 else:
     st.info("Coluna 'Forecast Indicator' ausente.")
@@ -122,8 +125,10 @@ if "Licensing Program Type" in df.columns:
     fig4 = px.bar(
         lt, x="Licensing Program Type", y="Total New ASV",
         template="plotly_dark", color="Licensing Program Type",
-        title="Pipeline por Licensing Program Type"
+        title="Pipeline por Licensing Program Type",
+        text="Total New ASV"
     )
+    fig4.update_traces(texttemplate="%{text:,.2f}", textposition="inside")
     st.plotly_chart(fig4, use_container_width=True)
 else:
     st.info("Coluna 'Licensing Program Type' ausente.")
@@ -135,8 +140,10 @@ if "Licensing Program" in df.columns:
     fig5 = px.bar(
         lp, x="Licensing Program", y="Total New ASV",
         template="plotly_dark", color="Licensing Program",
-        title="Pipeline por Licensing Program"
+        title="Pipeline por Licensing Program",
+        text="Total New ASV"
     )
+    fig5.update_traces(texttemplate="%{text:,.2f}", textposition="inside")
     st.plotly_chart(fig5, use_container_width=True)
 else:
     st.info("Coluna 'Licensing Program' ausente.")
@@ -148,11 +155,13 @@ if "Major OLPG1" in df.columns:
     fig6 = px.bar(
         mo, x="Major OLPG1", y="Total New ASV",
         template="plotly_dark", color="Major OLPG1",
-        title="Pipeline por Major OLPG1"
+        title="Pipeline por Major OLPG1",
+        text="Total New ASV"
     )
+    fig6.update_traces(texttemplate="%{text:,.2f}", textposition="inside")
     st.plotly_chart(fig6, use_container_width=True)
 else:
-    st.info("Coluna 'Major OLPG1' ausente.")
+    st.info("Coluna 'Major OLPG1' ausente.")    st.info("Coluna 'Major OLPG1' ausente.")
 
 # 12) Dados Brutos
 st.header("📋 Dados Brutos")
