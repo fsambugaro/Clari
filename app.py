@@ -2,33 +2,50 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import requests
+import subprocess
+import os
 
 # Configuração da página
 st.set_page_config(page_title="Dashboard Pipeline LATAM", layout="wide")
 st.title("📊 Dashboard Pipeline LATAM")
 
 # Constantes do GitHub
-GITHUB_API = "https://api.github.com"
-REPO_OWNER = "fsambugaro"
-REPO_NAME = "Clari"
-CSV_DIR = ""  # ajustar se os CSVs estiverem em subpasta
+github_api = "https://api.github.com"
+repo_owner = "fsambugaro"
+repo_name = "Clari"
+csv_dir = ""  # ajustar se os CSVs estiverem em subpasta
 
-@st.cache_data
+# Sincroniza repositório local com GitHub remoto
+try:
+    subprocess.run(["git", "-C", os.path.expanduser("~/Documents/Clari"), "pull", "origin", "main"], check=True)
+    st.write("✅ Repositório sincronizado com o GitHub.")
+except Exception as e:
+    st.error(f"Erro ao sincronizar repo: {e}")
+
+# Botão de refresh (força rerun)
+if st.button("🔄 Refresh data"):
+    st.experimental_rerun()
+
+# Lista de CSVs após pull
 def list_csv_files():
-    """Lista arquivos CSV do repositório via API do GitHub."""
-    url = f"{GITHUB_API}/repos/{REPO_OWNER}/{REPO_NAME}/contents/{CSV_DIR}"
-    resp = requests.get(url)
-    resp.raise_for_status()
-    items = resp.json()
-    return [item['name'] for item in items if item['type']=='file' and item['name'].lower().endswith('.csv')]
+    folder = os.path.expanduser("~/Documents/Clari")
+    return sorted([f for f in os.listdir(folder) if f.lower().endswith('.csv')])
 
+# Seleção de CSV
+csv_files = list_csv_files()
+st.sidebar.header('📂 Selecione o arquivo CSV')
+selected_file = st.sidebar.selectbox('Arquivos disponíveis:', [''] + csv_files)
+if not selected_file:
+    st.info('Selecione um arquivo CSV para continuar.')
+    st.stop()
+
+# Carrega e sanitiza dados a partir de arquivo local
 @st.cache_data
 def load_and_sanitize(filename: str) -> pd.DataFrame:
-    """Carrega CSV do raw do GitHub e sanitiza colunas."""
-    raw_url = f"https://raw.githubusercontent.com/{REPO_OWNER}/{REPO_NAME}/main/{CSV_DIR}{filename}"
-    df = pd.read_csv(raw_url)
+    path = os.path.expanduser(f"~/Documents/Clari/{filename}")
+    df = pd.read_csv(path)
     df.columns = df.columns.str.strip()
-    df['Sales Team Member'] = df.get('Sales Team Member', df.get('Owner','')).astype(str).str.strip()
+    df['Sales Team Member'] = df.get('Sales Team Member', df.get('Owner', '')).astype(str).str.strip()
     df['Stage'] = df['Stage'].astype(str).str.strip()
     df['Close Date'] = pd.to_datetime(df['Close Date'], errors='coerce')
     df['Total New ASV'] = (
@@ -38,139 +55,128 @@ def load_and_sanitize(filename: str) -> pd.DataFrame:
     )
     return df
 
-# 1) Seleção de CSV
-st.sidebar.header('📂 Selecione o arquivo CSV')
-csv_files = list_csv_files()
-selected_file = st.sidebar.selectbox('Arquivos disponíveis:', [''] + csv_files)
-if not selected_file:
-    st.info('Selecione um arquivo CSV para continuar.')
-    st.stop()
+# Carrega dados
+_df = load_and_sanitize(selected_file)
+# Renomeia variável para uso contínuo
+df = _df.copy()
 
-# 2) Carrega dados
-df = load_and_sanitize(selected_file)
-
-# 3) Filtros na sidebar
+# Filtros na sidebar
 st.sidebar.header('🔍 Filtros')
-# Sales Team Member
-distinct_members = ['Todos'] + sorted(df['Sales Team Member'].unique())
-selected_member = st.sidebar.selectbox('Sales Team Member:', distinct_members)
-if selected_member != 'Todos':
-    df = df[df['Sales Team Member'] == selected_member]
-# Sales Stage multi-seleção
-distinct_stages = sorted(df['Stage'].unique())
-selected_stages = st.sidebar.multiselect('Sales Stage:', distinct_stages, default=distinct_stages)
-if selected_stages:
-    df = df[df['Stage'].isin(selected_stages)]
-# Filtros adicionais
-ignore_cols = ['Sales Team Member','Stage','Close Date','Total New ASV',
-               'Record Owner','Account Name 1','Currency','Opportunity ID',
-               'Opportunity Currency','Clari Score']
-for col in [c for c in df.columns if c not in ignore_cols]:
-    choices = df[col].dropna().unique().tolist()
-    sel = st.sidebar.multiselect(col, choices)
+members = ['Todos'] + sorted(df['Sales Team Member'].unique())
+sel_member = st.sidebar.selectbox('Sales Team Member:', members)
+if sel_member != 'Todos':
+    df = df[df['Sales Team Member'] == sel_member]
+stages = sorted(df['Stage'].unique())
+sel_stages = st.sidebar.multiselect('Sales Stage:', stages, default=stages)
+if sel_stages:
+    df = df[df['Stage'].isin(sel_stages)]
+ignore = ['Sales Team Member','Stage','Close Date','Total New ASV',
+          'Record Owner','Account Name 1','Currency','Opportunity ID',
+          'Opportunity Currency','Clari Score']
+for col in [c for c in df.columns if c not in ignore]:
+    opts = df[col].dropna().unique().tolist()
+    sel = st.sidebar.multiselect(col, opts)
     if sel:
         df = df[df[col].isin(sel)]
 
-# 4) Pipeline por Fase
+# Formatação
+def fmt(x): return f"{x:,.2f}"
+
+# Pipeline por Fase
 st.header('🔍 Pipeline por Fase')
-st.write(f'Arquivo: **{selected_file}** | Filtrado: **{selected_member}**, Stages: **{", ".join(selected_stages)}**')
-stages_order = [
+st.write(f"Arquivo: **{selected_file}** | Membro: **{sel_member}** | Stages: **{', '.join(sel_stages)}**")
+order = [
     '02 - Prospect','03 - Opportunity Qualification',
     '05 - Solution Definition and Validation','06 - Customer Commit',
     '07 - Execute to Close','Closed - Booked'
 ]
-stage_data = (
-    df[df['Stage'].isin(stages_order)]
-      .groupby('Stage', as_index=False)['Total New ASV'].sum()
-)
-stage_data['Stage'] = pd.Categorical(stage_data['Stage'], categories=stages_order, ordered=True)
+data1 = df[df['Stage'].isin(order)].groupby('Stage', as_index=False)['Total New ASV'].sum()
+data1['Stage'] = pd.Categorical(data1['Stage'], categories=order, ordered=True)
 fig1 = px.bar(
-    stage_data, x='Total New ASV', y='Stage', orientation='h',
+    data1, x='Total New ASV', y='Stage', orientation='h',
     color='Stage', color_discrete_sequence=px.colors.qualitative.Vivid,
-    template='plotly_dark', title='Pipeline por Fase', text='Total New ASV'
+    template='plotly_dark', text='Total New ASV'
 )
 fig1.update_traces(texttemplate='%{text:,.2f}', textposition='inside')
 st.plotly_chart(fig1, use_container_width=True)
 
-# 5) Pipeline Mensal
+# Pipeline Mensal
 st.header('📈 Pipeline Mensal')
-temp = df.dropna(subset=['Close Date']).copy()
-temp['Month'] = temp['Close Date'].dt.to_period('M').dt.to_timestamp()
-monthly = temp.groupby('Month')['Total New ASV'].sum().reset_index()
-fig2 = px.line(
-    monthly, x='Month', y='Total New ASV', markers=True,
-    template='plotly_dark', title='Pipeline ao Longo do Tempo', text='Total New ASV'
-)
+tmp = df.dropna(subset=['Close Date']).copy()
+tmp['Month'] = tmp['Close Date'].dt.to_period('M').dt.to_timestamp()
+mon = tmp.groupby('Month')['Total New ASV'].sum().reset_index()
+fig2 = px.line(mon, x='Month', y='Total New ASV', markers=True,
+               template='plotly_dark', text='Total New ASV')
 fig2.update_traces(texttemplate='%{y:,.2f}', textposition='top center')
 st.plotly_chart(fig2, use_container_width=True)
 
-# 6) Ranking de Membros da Equipe
+# Ranking de Membros
 st.header('🏆 Ranking de Membros da Equipe')
 rk = df.groupby('Sales Team Member', as_index=False)['Total New ASV'].sum().sort_values('Total New ASV', ascending=False)
-rk['Total New ASV'] = rk['Total New ASV'].map('${:,.2f}'.format)
+rk['Total New ASV'] = rk['Total New ASV'].map(lambda x: f"${x:,.2f}")
 st.table(rk)
 
-# 7) Forecast Indicator
+# Forecast Indicator
 st.header('📊 Forecast Indicator')
 if 'Forecast Indicator' in df.columns:
     fc = df.groupby('Forecast Indicator', as_index=False)['Total New ASV'].sum()
     fig3 = px.bar(
         fc, x='Forecast Indicator', y='Total New ASV',
         color='Forecast Indicator', color_discrete_sequence=px.colors.qualitative.Vivid,
-        template='plotly_dark', title='Pipeline por Forecast Indicator', text='Total New ASV'
+        template='plotly_dark', text='Total New ASV'
     )
     fig3.update_traces(texttemplate='%{text:,.2f}', textposition='inside')
     st.plotly_chart(fig3, use_container_width=True)
 else:
     st.info("Coluna 'Forecast Indicator' ausente.")
 
-# 8) Licensing Program Type
+# Licensing Program Type
 st.header('📊 Licensing Program Type')
 if 'Licensing Program Type' in df.columns:
     lt = df.groupby('Licensing Program Type', as_index=False)['Total New ASV'].sum()
     fig4 = px.bar(
         lt, x='Licensing Program Type', y='Total New ASV',
         color='Licensing Program Type', color_discrete_sequence=px.colors.qualitative.Vivid,
-        template='plotly_dark', title='Pipeline por Licensing Program Type', text='Total New ASV'
+        template='plotly_dark', text='Total New ASV'
     )
     fig4.update_traces(texttemplate='%{text:,.2f}', textposition='inside')
     st.plotly_chart(fig4, use_container_width=True)
 else:
     st.info("Coluna 'Licensing Program Type' ausente.")
 
-# 9) Licensing Program
+# Licensing Program
 st.header('📊 Licensing Program')
 if 'Licensing Program' in df.columns:
     lp = df.groupby('Licensing Program', as_index=False)['Total New ASV'].sum()
     fig5 = px.bar(
         lp, x='Licensing Program', y='Total New ASV',
         color='Licensing Program', color_discrete_sequence=px.colors.qualitative.Vivid,
-        template='plotly_dark', title='Pipeline por Licensing Program', text='Total New ASV'
+        template='plotly_dark', text='Total New ASV'
     )
     fig5.update_traces(texttemplate='%{text:,.2f}', textposition='inside')
     st.plotly_chart(fig5, use_container_width=True)
 else:
     st.info("Coluna 'Licensing Program' ausente.")
 
-# 10) Major OLPG1
+# Major OLPG1
 st.header('📊 Major OLPG1')
 if 'Major OLPG1' in df.columns:
     mo = df.groupby('Major OLPG1', as_index=False)['Total New ASV'].sum()
     fig6 = px.bar(
         mo, x='Major OLPG1', y='Total New ASV',
         color='Major OLPG1', color_discrete_sequence=px.colors.qualitative.Vivid,
-        template='plotly_dark', title='Pipeline por Major OLPG1', text='Total New ASV'
+        template='plotly_dark', text='Total New ASV'
     )
     fig6.update_traces(texttemplate='%{text:,.2f}', textposition='inside')
     st.plotly_chart(fig6, use_container_width=True)
 else:
     st.info("Coluna 'Major OLPG1' ausente.")
 
-# 11) Dados Brutos
+# Dados Brutos
 st.header('📋 Dados Brutos')
 if 'Total New ASV' in df.columns:
     df_disp = df.copy()
-    df_disp['Total New ASV'] = df_disp['Total New ASV'].map(lambda x: f"{x:,.2f}")
+    df_disp['Total New ASV'] = df_disp['Total New ASV'].map(lambda x: fmt(x))
     st.dataframe(df_disp)
 else:
     st.dataframe(df)
