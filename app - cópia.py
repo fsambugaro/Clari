@@ -22,8 +22,10 @@ except Exception as e:
     st.error(f"Erro ao sincronizar repo: {e}")
 
 # Lista de CSVs após pull
+@st.cache_data
 def list_csv_files():
-    return sorted([f for f in os.listdir(REPO_PATH) if f.lower().endswith('.csv')])
+    files = sorted([f for f in os.listdir(REPO_PATH) if f.lower().endswith('.csv')])
+    return files
 
 # Seleção de CSV
 csv_files = list_csv_files()
@@ -105,13 +107,14 @@ fig1 = px.bar(
 fig1.update_traces(texttemplate='%{text:,.2f}', textposition='inside')
 st.plotly_chart(fig1, use_container_width=True)
 
-# 2) Pipeline Mensal
-temp = df.dropna(subset=['Close Date']).copy()
-temp['Month'] = temp['Close Date'].dt.to_period('M').dt.to_timestamp()
-monthly = temp.groupby('Month')['Total New ASV'].sum().reset_index()
+# 2) Pipeline Semanal
+st.header('📈 Pipeline Semanal')
+weekly_df = df.dropna(subset=['Close Date']).copy()
+weekly_df['Week'] = weekly_df['Close Date'].dt.to_period('W').dt.start_time
+weekly = weekly_df.groupby('Week')['Total New ASV'].sum().reset_index()
 fig2 = px.line(
-    monthly, x='Month', y='Total New ASV', markers=True,
-    template='plotly_dark', title='Pipeline ao Longo do Tempo', text='Total New ASV'
+    weekly, x='Week', y='Total New ASV', markers=True,
+    template='plotly_dark', title='Pipeline Semanal', text='Total New ASV'
 )
 fig2.update_traces(texttemplate='%{y:,.2f}', textposition='top center')
 st.plotly_chart(fig2, use_container_width=True)
