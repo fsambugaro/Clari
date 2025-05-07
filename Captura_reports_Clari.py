@@ -35,8 +35,8 @@ REPORTS = [
 ]
 REPORT_URLS = {
     "LATAM FY25 This Quarter all pipe": "https://app.clari.com/opportunities/68154b1c2385aa673b611594",
-    "LATAM FY25 NQ all pipe":         "https://app.clari.com/opportunities/681637b3209b07709f94bcda",
-    "Pipe LATAM FY25 full year":      "https://app.clari.com/opportunities/67f7dbf2a9815a3705a5152e",
+    "LATAM FY25 NQ all pipe":         "https://app.clari.com/opportunities/681a6248209b07709f9ccc6b",
+    "Pipe LATAM FY25 full year":      "https://app.clari.com/opportunities/681a62c12385aa673b6a7a6a",
 }
 
 # Calcula semana dentro do trimestre fiscal (Adobe fiscal year começa em dezembro)

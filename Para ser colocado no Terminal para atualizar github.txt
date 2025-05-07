@@ -1,0 +1,5 @@
+cd ~/Desktop
+./deploy_clari.sh
+# ou
+./run_pipeline_app.sh
+

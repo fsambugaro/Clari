@@ -105,7 +105,14 @@ sel_region = st.sidebar.selectbox('Region', regions)
 if sel_region != 'Todos':
     df = df[df['Sub Territory'].astype(str).str.contains(sel_region, case=False, na=False)]
 
-
+# 8) Totais após filtros iniciais
+total_pipeline = df[df['Stage'].isin([
+    '03 - Opportunity Qualification',
+    '05 - Solution Definition and Validation',
+    '06 - Customer Commit'
+])]['Total New ASV'].sum()
+total_won = df[df['Stage'].isin(['07 - Execute to Close', 'Closed - Booked'])]['Total New ASV'].sum()
+st.subheader(f"Total Pipeline: {total_pipeline:,.2f}   Total Won: {total_won:,.2f}")
 
 # 9) Filtros adicionais personalizados
 st.sidebar.header('🔧 Filtros adicionais')
@@ -144,32 +151,6 @@ elif edu_choice == 'Others':
     df = enum_df[~enum_df['Sub Territory'].str.contains('EDU', case=False, na=False)]
 else:
     df = enum_df
-
-# Totais atualizados após todos os filtros (incluindo EDU)
-total_pipeline = df[df['Stage'].isin([
-    '03 - Opportunity Qualification',
-    '05 - Solution Definition and Validation',
-    '06 - Customer Commit'
-])]['Total New ASV'].sum()
-total_won = df[df['Stage'].isin(['07 - Execute to Close', 'Closed - Booked'])]['Total New ASV'].sum()
-st.subheader(f"Total Pipeline: {total_pipeline:,.2f}   Total Won: {total_won:,.2f}")
-# Exibir filtros aplicados (excluindo Sales Stage)
-applied_filters = []
-if sel_member != 'Todos': applied_filters.append(f"Sales Team Member: {sel_member}")
-if sel_region != 'Todos': applied_filters.append(f"Region: {sel_region}")
-# Filtros adicionais personalizados
-if 'sel_fq' in locals() and sel_fq != 'Todos': applied_filters.append(f"Fiscal Quarter: {sel_fq}")
-if 'sel_fc' in locals() and sel_fc != 'Todos': applied_filters.append(f"Forecast Indicator: {sel_fc}")
-if 'sel_drid' in locals() and sel_drid != 'Todos': applied_filters.append(f"Deal Registration ID: {sel_drid}")
-if 'sel_dg' in locals() and sel_dg != 'Todos': applied_filters.append(f"Dias desde Next Steps: {sel_dg}")
-if 'sel_lpt' in locals() and sel_lpt != 'Todos': applied_filters.append(f"Licensing Program Type: {sel_lpt}")
-if 'sel_op' in locals() and sel_op != 'Todos': applied_filters.append(f"Opportunity: {sel_op}")
-if 'sel_an' in locals() and sel_an != 'Todos': applied_filters.append(f"Account Name: {sel_an}")
-if 'sel_state' in locals() and sel_state != 'Todos': applied_filters.append(f"State/Province: {sel_state}")
-# Filtro EDU
-if edu_choice != 'All': applied_filters.append(f"Filtro EDU: {edu_choice}")
-if applied_filters:
-    st.markdown("**Filtros aplicados:** " + " | ".join(applied_filters))
 
 # 10) Pipeline por Fase
 st.header('🔍 Pipeline por Fase')
