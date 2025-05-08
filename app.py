@@ -86,42 +86,26 @@ if not file:
 df = load_data(file)
 
 # 7) Filtros básicos
-# Basic filters setup
 st.sidebar.header('🔍 Filters')
-stages = sorted(df['Stage'].unique())
-default_stages = [s for s in stages if s not in ['Closed - Clean Up','Closed - Lost']]
-
 # Reset button for basic filters
 def reset_basic_filters():
     st.session_state['sel_member'] = 'All'
     st.session_state['sel_stages'] = default_stages.copy()
     st.session_state['sel_region'] = 'All'
     st.experimental_rerun()
-
 if st.sidebar.button('🔄 Reset Filters'):
     reset_basic_filters()
 
-# Basic filters
-tmembers = ['All'] + sorted(df['Sales Team Member'].unique())
-sel_member = st.sidebar.selectbox('Sales Team Member', tmembers, key='sel_member')
-sel_stages = st.sidebar.multiselect('Sales Stage', stages, default=default_stages, key='sel_stages')
-regions = ['All','Brazil','Hispanic']
-sel_region = st.sidebar.selectbox('Region', regions, key='sel_region')
-tmembers = ['All'] + sorted(df['Sales Team Member'].unique())
-sel_member = st.sidebar.selectbox('Sales Team Member', tmembers, key='sel_member')
+# Basic filters widgets
+members = ['All'] + sorted(df['Sales Team Member'].unique())
+sel_member = st.sidebar.selectbox('Sales Team Member', members, key='sel_member')
 stages = sorted(df['Stage'].unique())
 default_stages = [s for s in stages if s not in ['Closed - Clean Up','Closed - Lost']]
 sel_stages = st.sidebar.multiselect('Sales Stage', stages, default=default_stages, key='sel_stages')
 regions = ['All','Brazil','Hispanic']
 sel_region = st.sidebar.selectbox('Region', regions, key='sel_region')
 
-# Aplica filtros automaticamente
-if sel_member != 'All':
-    df = df[df['Sales Team Member'] == sel_member]
-if sel_stages:
-    df = df[df['Stage'].isin(sel_stages)]
-if sel_region != 'All' and 'Sub Territory' in df.columns:
-    df = df[df['Sub Territory'].astype(str).str.contains(sel_region, case=False, na=False)]
+# Apply filters automatically
 if sel_member != 'All':
     df = df[df['Sales Team Member'] == sel_member]
 if sel_stages:
