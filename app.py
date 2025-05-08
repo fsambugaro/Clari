@@ -208,12 +208,24 @@ st.plotly_chart(fig, use_container_width=True, key='pipeline_stage')
 download_html(fig, 'pipeline_by_stage')
 
 # 11) Pipeline Semanal
-st.plotly_chart(fig, use_container_width=True, key='pipeline_weekly')
-download_html(fig, 'pipeline_weekly')
+st.header('📈 Pipeline Semanal')
+dfw = df.dropna(subset=['Close Date']).copy()
+dfw['Week'] = dfw['Close Date'].dt.to_period('W').dt.to_timestamp()
+weekly = dfw.groupby('Week')['Total New ASV'].sum().reset_index()
+fig2 = px.line(weekly, x='Week', y='Total New ASV', markers=True, template='plotly_dark', text='Total New ASV')
+fig2.update_traces(texttemplate='%{y:,.2f}', textposition='top center')
+st.plotly_chart(fig2, use_container_width=True, key='pipeline_weekly')
+download_html(fig2, 'pipeline_weekly')
 
 # 12) Pipeline Mensal
-st.plotly_chart(fig, use_container_width=True, key='pipeline_monthly')
-download_html(fig, 'pipeline_monthly')
+st.header('📆 Pipeline Mensal')
+mon = dfw.copy()
+mon['Month'] = mon['Close Date'].dt.to_period('M').dt.to_timestamp()
+monthly = mon.groupby('Month')['Total New ASV'].sum().reset_index()
+fig3 = px.line(monthly, x='Month', y='Total New ASV', markers=True, template='plotly_dark', text='Total New ASV')
+fig3.update_traces(texttemplate='%{y:,.2f}', textposition='top center')
+st.plotly_chart(fig3, use_container_width=True, key='pipeline_monthly')
+download_html(fig3, 'pipeline_monthly')
 
 # 13) Ranking de Vendedores
 st.header('🏆 Ranking de Vendedores')
