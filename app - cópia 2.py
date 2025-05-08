@@ -91,11 +91,10 @@ excluded = ['Closed - Clean Up', 'Closed - Lost']
 default = [s for s in stages if s not in excluded]
 sel_stages = st.sidebar.multiselect('Sales Stage', stages, default)
 if sel_stages: df = df[df['Stage'].isin(sel_stages)]
-# Region (using Sub Territory matching)
+# Region
 regions = ['All', 'Brazil', 'Hispanic']
 sel_region = st.sidebar.selectbox('Region', regions)
-if sel_region != 'All':
-    df = df[df['Sub Territory'].astype(str).str.contains(sel_region, case=False, na=False)]
+if sel_region != 'All': df = df[df['Region'] == sel_region]
 
 # 8) Additional filters
 st.sidebar.header('🔧 Additional Filters')
@@ -197,17 +196,6 @@ for col, title in extras:
         html = fig.to_html(include_plotlyjs='cdn')
         fname = title.replace(' ', '_').lower() + '.html'
         st.download_button('Download Chart (HTML)', html, file_name=fname, mime='text/html')
-
-# 9) EDU Filter
-# Re-add EDU filter radio
-enum_df = df.copy()
-edu_choice = st.sidebar.radio('EDU Filter', ['All', 'EDU', 'Others'], index=0)
-if edu_choice == 'EDU':
-    df = enum_df[enum_df['Sub Territory'].astype(str).str.contains('EDU', case=False, na=False)]
-elif edu_choice == 'Others':
-    df = enum_df[~enum_df['Sub Territory'].astype(str).str.contains('EDU', case=False, na=False)]
-else:
-    df = enum_df
 
 # 15) Raw Data and detail
 st.header('📋 Raw Data')
