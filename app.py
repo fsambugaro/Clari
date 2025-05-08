@@ -76,6 +76,7 @@ if not file:
     st.info('Please select a CSV to continue')
     st.stop()
 
+# Load data
 df = load_data(file)
 
 # 7) Basic filters
@@ -145,7 +146,9 @@ fig = px.bar(
 )
 fig.update_traces(texttemplate='%{text:,.2f}', textposition='inside')
 st.plotly_chart(fig, use_container_width=True)
-st.download_button('Download Chart', fig.to_image(format='png'), file_name='pipeline_by_stage.png', mime='image/png')
+# Download as HTML
+html = fig.to_html(include_plotlyjs='cdn')
+st.download_button('Download Chart (HTML)', html, file_name='pipeline_by_stage.html', mime='text/html')
 
 # 11) Weekly Pipeline
 st.header('📈 Weekly Pipeline')
@@ -155,7 +158,8 @@ weekly = dfw.groupby('Week')['Total New ASV'].sum().reset_index()
 fig = px.line(weekly, x='Week', y='Total New ASV', markers=True, template='plotly_dark', text='Total New ASV')
 fig.update_traces(texttemplate='%{y:,.2f}', textposition='top center')
 st.plotly_chart(fig, use_container_width=True)
-st.download_button('Download Chart', fig.to_image(format='png'), file_name='weekly_pipeline.png', mime='image/png')
+html = fig.to_html(include_plotlyjs='cdn')
+st.download_button('Download Chart (HTML)', html, file_name='weekly_pipeline.html', mime='text/html')
 
 # 12) Monthly Pipeline
 st.header('📆 Monthly Pipeline')
@@ -165,7 +169,8 @@ monthly = mon.groupby('Month')['Total New ASV'].sum().reset_index()
 fig = px.line(monthly, x='Month', y='Total New ASV', markers=True, template='plotly_dark', text='Total New ASV')
 fig.update_traces(texttemplate='%{y:,.2f}', textposition='top center')
 st.plotly_chart(fig, use_container_width=True)
-st.download_button('Download Chart', fig.to_image(format='png'), file_name='monthly_pipeline.png', mime='image/png')
+html = fig.to_html(include_plotlyjs='cdn')
+st.download_button('Download Chart (HTML)', html, file_name='monthly_pipeline.html', mime='text/html')
 
 # 13) Sales Rep Ranking
 st.header('🏆 Sales Rep Ranking')
@@ -188,14 +193,15 @@ for col, title in extras:
         fig = px.bar(dcol, x=col, y='Total New ASV', text='Total New ASV', template='plotly_dark')
         fig.update_traces(texttemplate='%{text:,.2f}', textposition='inside')
         st.plotly_chart(fig, use_container_width=True)
-        st.download_button('Download Chart', fig.to_image(format='png'), file_name=f"{title.replace(' ', '_').lower()}.png", mime='image/png')
+        html = fig.to_html(include_plotlyjs='cdn')
+        fname = title.replace(' ', '_').lower() + '.html'
+        st.download_button('Download Chart (HTML)', html, file_name=fname, mime='text/html')
 
 # 15) Raw Data and detail
 st.header('📋 Raw Data')
 # Download filtered data
 st.download_button('Download Data', df.to_csv(index=False), file_name='filtered_data.csv', mime='text/csv')
 # Display
-
 disp = df.copy()
 gb = GridOptionsBuilder.from_dataframe(disp)
 gb.configure_default_column(cellStyle={'color':'white','backgroundColor':'#000000'})
