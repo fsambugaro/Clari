@@ -204,15 +204,15 @@ fig = px.bar(
     text='Total New ASV', color='Stage', color_discrete_sequence=px.colors.qualitative.Vivid
 )
 fig.update_traces(texttemplate='%{text:,.2f}', textposition='inside')
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, use_container_width=True, key='pipeline_stage')
 download_html(fig, 'pipeline_by_stage')
 
 # 11) Pipeline Semanal
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, use_container_width=True, key='pipeline_weekly')
 download_html(fig, 'pipeline_weekly')
 
 # 12) Pipeline Mensal
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, use_container_width=True, key='pipeline_monthly')
 download_html(fig, 'pipeline_monthly')
 
 # 13) Ranking de Vendedores
