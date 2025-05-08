@@ -87,11 +87,13 @@ df = load_data(file)
 
 # 7) Filtros básicos
 st.sidebar.header('🔍 Filters')
-# Reset Filters: reload page to defaults
-if st.sidebar.button('🔄 Reset Filters'):
+
+# Reset Filters: reload the entire app (visual state fully reset)
+# no session_state is preserved because keys are removed below
+if st.sidebar.button('🔄 Reset Filters', key='reset'):
     st.experimental_rerun()
 
-# Basic filters widgets (no session_state keys)
+# Basic filters widgets (no explicit keys so they reset on reload)
 members = ['All'] + sorted(df['Sales Team Member'].unique())
 sel_member = st.sidebar.selectbox('Sales Team Member', members, index=0)
 stages = sorted(df['Stage'].unique())
@@ -101,14 +103,6 @@ regions = ['All','Brazil','Hispanic']
 sel_region = st.sidebar.selectbox('Region', regions, index=0)
 
 # Apply filters automatically
-if sel_member != 'All':
-    df = df[df['Sales Team Member'] == sel_member]
-if sel_stages:
-    df = df[df['Stage'].isin(sel_stages)]
-if sel_region != 'All' and 'Sub Territory' in df.columns:
-    df = df[df['Sub Territory'].astype(str).str.contains(sel_region, case=False, na=False)]
-
-# 9) Filtros adicionais personalizados
 if sel_member != 'All':
     df = df[df['Sales Team Member'] == sel_member]
 if sel_stages:
