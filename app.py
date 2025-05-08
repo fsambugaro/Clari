@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import os
+import io
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
 
 # 1) Configurações iniciais
@@ -36,9 +37,9 @@ st.markdown(
 )
 
 # 2) Título
-st.title("📊 Dashboard Pipeline LATAM")
+st.title("📊 LATAM Pipeline Dashboard")
 
-# 3) Caminho dos CSVs
+# 3) Caminho dos CSVs) Caminho dos CSVs
 DIR = os.getcwd()
 
 # 4) Lista de CSVs disponíveis
@@ -76,8 +77,8 @@ def load_data(path):
     return df
 
 # 6) Seleção de CSV
-st.sidebar.header('📂 Selecione o CSV')
-file = st.sidebar.selectbox('Arquivo:', [''] + list_csv_files())
+st.sidebar.header('📂 Select CSV file')
+file = st.sidebar.selectbox('File:', [''] + list_csv_files())
 if not file:
     st.info('Selecione um CSV para continuar')
     st.stop()
@@ -175,6 +176,20 @@ if 'sel_state' in locals() and sel_state != 'Todos': applied_filters.append(f"St
 if edu_choice != 'All': applied_filters.append(f"Filtro EDU: {edu_choice}")
 if applied_filters:
     st.markdown("**Filtros aplicados:** " + " | ".join(applied_filters))
+    # Download filtered data (CSV)
+    csv_data = df.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        '⬇️ Download Filtered Data (CSV)',
+        csv_data,
+        file_name=f'pipeline_{file.replace(".csv","")}.csv',
+        mime='text/csv'
+    )** " + " | ".join(applied_filters))
+
+# Helper to download plot as HTML
+def download_html(fig, name):
+    buf = io.StringIO()
+    fig.write_html(buf, include_plotlyjs='cdn')
+    st.download_button(f'⬇️ Download {name} (HTML)', buf.getvalue(), file_name=f'{name}.html', mime='text/html')
 
 # 10) Pipeline por Fase
 st.header('🔍 Pipeline por Fase')
@@ -190,24 +205,15 @@ fig = px.bar(
 )
 fig.update_traces(texttemplate='%{text:,.2f}', textposition='inside')
 st.plotly_chart(fig, use_container_width=True)
+download_html(fig, 'pipeline_by_stage')
 
 # 11) Pipeline Semanal
-st.header('📈 Pipeline Semanal')
-dfw = df.dropna(subset=['Close Date']).copy()
-dfw['Week'] = dfw['Close Date'].dt.to_period('W').dt.to_timestamp()
-weekly = dfw.groupby('Week')['Total New ASV'].sum().reset_index()
-fig = px.line(weekly, x='Week', y='Total New ASV', markers=True, template='plotly_dark', text='Total New ASV')
-fig.update_traces(texttemplate='%{y:,.2f}', textposition='top center')
 st.plotly_chart(fig, use_container_width=True)
+download_html(fig, 'pipeline_weekly')
 
 # 12) Pipeline Mensal
-st.header('📆 Pipeline Mensal')
-mon = dfw.copy()
-mon['Month'] = mon['Close Date'].dt.to_period('M').dt.to_timestamp()
-monthly = mon.groupby('Month')['Total New ASV'].sum().reset_index()
-fig = px.line(monthly, x='Month', y='Total New ASV', markers=True, template='plotly_dark', text='Total New ASV')
-fig.update_traces(texttemplate='%{y:,.2f}', textposition='top center')
 st.plotly_chart(fig, use_container_width=True)
+download_html(fig, 'pipeline_monthly')
 
 # 13) Ranking de Vendedores
 st.header('🏆 Ranking de Vendedores')
