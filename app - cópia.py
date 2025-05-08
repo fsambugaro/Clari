@@ -147,7 +147,7 @@ else:
 
 # Totais atualizados após todos os filtros (incluindo EDU)
 total_pipeline = df[df['Stage'].isin([
-    '03 - Opportunity Qualification','04 - Circle of Influence',
+    '03 - Opportunity Qualification',
     '05 - Solution Definition and Validation',
     '06 - Customer Commit'
 ])]['Total New ASV'].sum()
@@ -174,10 +174,9 @@ if applied_filters:
 # 10) Pipeline por Fase
 st.header('🔍 Pipeline por Fase')
 order = [
-    '02 - Prospect', '03 - Opportunity Qualification', '04 - Circle of Influence','05 - Solution Definition and Validation',
+    '02 - Prospect', '03 - Opportunity Qualification', '05 - Solution Definition and Validation',
     '06 - Customer Commit', '07 - Execute to Close', 'Closed - Booked'
 ]
-
 phase = df[df['Stage'].isin(order)].groupby('Stage')['Total New ASV'].sum().reindex(order).reset_index()
 fig = px.bar(
     phase, x='Total New ASV', y='Stage', orientation='h', template='plotly_dark',
