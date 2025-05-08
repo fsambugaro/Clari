@@ -87,29 +87,28 @@ df = load_data(file)
 
 # 7) Filtros básicos
 st.sidebar.header('🔍 Filters')
-# Prepare default values
+# Reset Filters: reload page to defaults
+if st.sidebar.button('🔄 Reset Filters'):
+    st.experimental_rerun()
+
+# Basic filters widgets (no session_state keys)
+members = ['All'] + sorted(df['Sales Team Member'].unique())
+sel_member = st.sidebar.selectbox('Sales Team Member', members, index=0)
 stages = sorted(df['Stage'].unique())
 default_stages = [s for s in stages if s not in ['Closed - Clean Up','Closed - Lost']]
-
-# Reset Filters button: simply rerun to defaults
-st.sidebar.button('🔄 Reset Filters', on_click=st.experimental_rerun)
-
-# Basic filters widgets
-members = ['All'] + sorted(df['Sales Team Member'].unique())
-sel_member = st.sidebar.selectbox(
-    'Sales Team Member', members, index=0, key='sel_member'
-)
-sel_stages = st.sidebar.multiselect(
-    'Sales Stage', stages,
-    default=st.session_state.get('sel_stages', default_stages),
-    key='sel_stages'
-)
+sel_stages = st.sidebar.multiselect('Sales Stage', stages, default=default_stages)
 regions = ['All','Brazil','Hispanic']
-sel_region = st.sidebar.selectbox(
-    'Region', regions, index=0, key='sel_region'
-)
+sel_region = st.sidebar.selectbox('Region', regions, index=0)
 
 # Apply filters automatically
+if sel_member != 'All':
+    df = df[df['Sales Team Member'] == sel_member]
+if sel_stages:
+    df = df[df['Stage'].isin(sel_stages)]
+if sel_region != 'All' and 'Sub Territory' in df.columns:
+    df = df[df['Sub Territory'].astype(str).str.contains(sel_region, case=False, na=False)]
+
+# 9) Filtros adicionais personalizados
 if sel_member != 'All':
     df = df[df['Sales Team Member'] == sel_member]
 if sel_stages:
