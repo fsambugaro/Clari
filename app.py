@@ -217,4 +217,13 @@ disp=df.copy()
 gb=GridOptionsBuilder.from_dataframe(disp)
 gb.configure_default_column(cellStyle={'color':'white','backgroundColor':'#000000'})
 numeric_cols=disp.select_dtypes(include=[np.number]).columns.tolist()
-us_format=JsCode("function(params){return params.value!=null?params.value.toLocaleString('en-US',{minimumFractionDigits:2,maximum
+us_format = JsCode(
+    "function(params){return params.value!=null?params.value.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):''}"
+)
+for col in numeric_cols:
+    gb.configure_column(
+        col,
+        type=['numericColumn','numberColumnFilter'],
+        cellStyle={'textAlign':'right','color':'white','backgroundColor':'#000000'},
+        cellRenderer=us_format
+    )
