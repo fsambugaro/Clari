@@ -141,14 +141,25 @@ if applied: st.markdown("**Filtros aplicados:** " + " | ".join(applied))
 
 # Funções de exportação
 buffer = io.BytesIO()
-with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+# Usar openpyxl para evitar ausência do xlsxwriter
+with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
     df.to_excel(writer, index=False, sheet_name='Dados')
 buffer.seek(0)
-st.download_button('⬇️ Baixar dados filtrados (Excel)', data=buffer, file_name=f'pipeline_{file.split(".csv")[0]}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+st.download_button(
+    '⬇️ Baixar dados filtrados (Excel)',
+    data=buffer,
+    file_name=f'pipeline_{file.split('.csv')[0]}.xlsx',
+    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+)
 
 def export_plot(fig, name):
     img = fig.to_image(format='png')
-    st.download_button(f'⬇️ Baixar {name} (PNG)', data=img, file_name=f'{name}.png', mime='image/png')
+    st.download_button(
+        f'⬇️ Baixar {name} (PNG)',
+        data=img,
+        file_name=f'{name}.png',
+        mime='image/png'
+)
 
 # 10) Pipeline por Fase
 order=['02 - Prospect','03 - Opportunity Qualification','04 - Circle of Influence','05 - Solution Definition and Validation','06 - Customer Commit','07 - Execute to Close','Closed - Booked']
