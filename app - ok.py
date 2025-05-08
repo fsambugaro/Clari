@@ -59,13 +59,14 @@ def load_data(path):
           .str.replace(r"[\$,]", '', regex=True)
           .astype(float)
     )
-    # Converte campos numéricos adicionais
+    # Converte campos numéricos adicionais para float, para alinhamento correto
     for col in ['Renewal Bookings','Total DMe Est HASV','Total Attrition','Total TSV','Total Renewal ASV']:
         if col in df.columns:
             df[col] = (
-                df[col].astype(str).str.replace(r"[\$,]", '', regex=True).astype(float)
+                df[col].astype(str)
+                     .str.replace(r"[\$,]", '', regex=True)
+                     .astype(float)
             )
-    # Região
     if 'Sub Territory' in df.columns:
         df['Region'] = df['Sub Territory'].astype(str).apply(
             lambda x: 'Hispanic' if 'Hispanic' in x else ('Brazil' if 'Brazil' in x else 'Other')
@@ -90,20 +91,28 @@ tmembers = ['Todos'] + sorted(df['Sales Team Member'].unique())
 sel_member = st.sidebar.selectbox('Sales Team Member', tmembers)
 if sel_member != 'Todos':
     df = df[df['Sales Team Member'] == sel_member]
-# Sales Stage
+# Sales Stage (fechadas Clean Up e Lost desmarcadas por padrão, Closed - Booked marcado)
 stages = sorted(df['Stage'].unique())
-closed = ['Closed - Clean Up', 'Closed - Lost']
+closed = ['Closed - Clean Up', 'Closed - Lost']  # Clean Up e Lost desmarcadas
+# Closed - Booked estará marcado por default
 default_stages = [s for s in stages if s not in closed]
 sel_stages = st.sidebar.multiselect('Sales Stage', stages, default=default_stages)
 if sel_stages:
     df = df[df['Stage'].isin(sel_stages)]
-# Region (Sub Territory)
+# Region: Brazil / Hispanic
 regions = ['Todos', 'Brazil', 'Hispanic']
 sel_region = st.sidebar.selectbox('Region', regions)
 if sel_region != 'Todos':
     df = df[df['Sub Territory'].astype(str).str.contains(sel_region, case=False, na=False)]
 
-# 8) Filtros adicionais
+
+
+# 9) Filtros adicionais personalizados
+# --- Converter dias em número, evitar erro de bins
+if 'Days Since Next Steps Modified' in df.columns:
+    df['Days Since Next Steps Modified'] = pd.to_numeric(
+        df['Days Since Next Steps Modified'], errors='coerce'
+    )
 st.sidebar.header('🔧 Filtros adicionais')
 if 'Fiscal Quarter' in df.columns:
     sel_fq = st.sidebar.selectbox('Fiscal Quarter', ['Todos'] + sorted(df['Fiscal Quarter'].dropna().unique()))
@@ -115,7 +124,6 @@ if 'Deal Registration ID' in df.columns:
     sel_drid = st.sidebar.selectbox('Deal Registration ID', ['Todos'] + sorted(df['Deal Registration ID'].dropna().unique()))
     if sel_drid != 'Todos': df = df[df['Deal Registration ID'] == sel_drid]
 if 'Days Since Next Steps Modified' in df.columns:
-    df['Days Since Next Steps Modified'] = pd.to_numeric(df['Days Since Next Steps Modified'], errors='coerce')
     labels = ['<=7 dias', '8-14 dias', '15-30 dias', '>30 dias']
     df['DaysGroup'] = pd.cut(df['Days Since Next Steps Modified'], bins=[0,7,14,30,float('inf')], labels=labels)
     sel_dg = st.sidebar.selectbox('Dias desde Next Steps', ['Todos'] + labels)
@@ -133,51 +141,57 @@ if 'Account Address: State/Province' in df.columns:
     sel_state = st.sidebar.selectbox('Account Address: State/Province', ['Todos'] + sorted(df['Account Address: State/Province'].dropna().unique()))
     if sel_state != 'Todos': df = df[df['Account Address: State/Province'] == sel_state]
 
-# 9) Filtro EDU
 enum_df = df.copy()
 edu_choice = st.sidebar.radio('Filtro EDU', ['All', 'EDU', 'Others'], index=0)
-if 'Sub Territory' in enum_df.columns:
-    if edu_choice == 'EDU':
-        df = enum_df[enum_df['Sub Territory'].astype(str).str.contains('EDU', case=False, na=False)]
-    elif edu_choice == 'Others':
-        df = enum_df[~enum_df['Sub Territory'].astype(str).str.contains('EDU', case=False, na=False)]
-    else:
-        df = enum_df
+if edu_choice == 'EDU':
+    df = enum_df[enum_df['Sub Territory'].str.contains('EDU', case=False, na=False)]
+elif edu_choice == 'Others':
+    df = enum_df[~enum_df['Sub Territory'].str.contains('EDU', case=False, na=False)]
 else:
     df = enum_df
 
-# 10) Totais atualizados após filtros
-# Inclui Stage 4
+# Totais atualizados após todos os filtros (incluindo EDU)
 total_pipeline = df[df['Stage'].isin([
-    '03 - Opportunity Qualification',
-    '04 - Circle of Influence',
+    '03 - Opportunity Qualification','04 - Circle of Influence',
     '05 - Solution Definition and Validation',
     '06 - Customer Commit'
 ])]['Total New ASV'].sum()
 total_won = df[df['Stage'].isin(['07 - Execute to Close', 'Closed - Booked'])]['Total New ASV'].sum()
 st.subheader(f"Total Pipeline: {total_pipeline:,.2f}   Total Won: {total_won:,.2f}")
+# Exibir filtros aplicados (excluindo Sales Stage)
+applied_filters = []
+if sel_member != 'Todos': applied_filters.append(f"Sales Team Member: {sel_member}")
+if sel_region != 'Todos': applied_filters.append(f"Region: {sel_region}")
+# Filtros adicionais personalizados
+if 'sel_fq' in locals() and sel_fq != 'Todos': applied_filters.append(f"Fiscal Quarter: {sel_fq}")
+if 'sel_fc' in locals() and sel_fc != 'Todos': applied_filters.append(f"Forecast Indicator: {sel_fc}")
+if 'sel_drid' in locals() and sel_drid != 'Todos': applied_filters.append(f"Deal Registration ID: {sel_drid}")
+if 'sel_dg' in locals() and sel_dg != 'Todos': applied_filters.append(f"Dias desde Next Steps: {sel_dg}")
+if 'sel_lpt' in locals() and sel_lpt != 'Todos': applied_filters.append(f"Licensing Program Type: {sel_lpt}")
+if 'sel_op' in locals() and sel_op != 'Todos': applied_filters.append(f"Opportunity: {sel_op}")
+if 'sel_an' in locals() and sel_an != 'Todos': applied_filters.append(f"Account Name: {sel_an}")
+if 'sel_state' in locals() and sel_state != 'Todos': applied_filters.append(f"State/Province: {sel_state}")
+# Filtro EDU
+if edu_choice != 'All': applied_filters.append(f"Filtro EDU: {edu_choice}")
+if applied_filters:
+    st.markdown("**Filtros aplicados:** " + " | ".join(applied_filters))
 
-# 11) Pipeline por Fase
+# 10) Pipeline por Fase
 st.header('🔍 Pipeline por Fase')
 order = [
-    '02 - Prospect',
-    '03 - Opportunity Qualification',
-    '04 - Circle of Influence',
-    '05 - Solution Definition and Validation',
-    '06 - Customer Commit',
-    '07 - Execute to Close',
-    'Closed - Booked'
+    '02 - Prospect', '03 - Opportunity Qualification', '04 - Circle of Influence','05 - Solution Definition and Validation',
+    '06 - Customer Commit', '07 - Execute to Close', 'Closed - Booked'
 ]
+
 phase = df[df['Stage'].isin(order)].groupby('Stage')['Total New ASV'].sum().reindex(order).reset_index()
-fig = px.bar(phase, x='Total New ASV', y='Stage', orientation='h', template='plotly_dark', text='Total New ASV', color='Stage', color_discrete_sequence=px.colors.qualitative.Vivid)
+fig = px.bar(
+    phase, x='Total New ASV', y='Stage', orientation='h', template='plotly_dark',
+    text='Total New ASV', color='Stage', color_discrete_sequence=px.colors.qualitative.Vivid
+)
 fig.update_traces(texttemplate='%{text:,.2f}', textposition='inside')
 st.plotly_chart(fig, use_container_width=True)
-# Download Dados Brutos CSV e Chart HTML
-st.download_button('Download Filtered Data', df.to_csv(index=False), file_name='filtered_data.csv', mime='text/csv')
-html = fig.to_html(include_plotlyjs='cdn')
-st.download_button('Download Chart (HTML)', html, file_name='pipeline_phase.html', mime='text/html')
 
-# 12) Pipeline Semanal
+# 11) Pipeline Semanal
 st.header('📈 Pipeline Semanal')
 dfw = df.dropna(subset=['Close Date']).copy()
 dfw['Week'] = dfw['Close Date'].dt.to_period('W').dt.to_timestamp()
@@ -185,10 +199,8 @@ weekly = dfw.groupby('Week')['Total New ASV'].sum().reset_index()
 fig = px.line(weekly, x='Week', y='Total New ASV', markers=True, template='plotly_dark', text='Total New ASV')
 fig.update_traces(texttemplate='%{y:,.2f}', textposition='top center')
 st.plotly_chart(fig, use_container_width=True)
-html = fig.to_html(include_plotlyjs='cdn')
-st.download_button('Download Chart (HTML)', html, file_name='weekly_pipeline.html', mime='text/html')
 
-# 13) Pipeline Mensal
+# 12) Pipeline Mensal
 st.header('📆 Pipeline Mensal')
 mon = dfw.copy()
 mon['Month'] = mon['Close Date'].dt.to_period('M').dt.to_timestamp()
@@ -196,17 +208,15 @@ monthly = mon.groupby('Month')['Total New ASV'].sum().reset_index()
 fig = px.line(monthly, x='Month', y='Total New ASV', markers=True, template='plotly_dark', text='Total New ASV')
 fig.update_traces(texttemplate='%{y:,.2f}', textposition='top center')
 st.plotly_chart(fig, use_container_width=True)
-html = fig.to_html(include_plotlyjs='cdn')
-st.download_button('Download Chart (HTML)', html, file_name='monthly_pipeline.html', mime='text/html')
 
-# 14) Ranking de Vendedores
+# 13) Ranking de Vendedores
 st.header('🏆 Ranking de Vendedores')
 r = df.groupby('Sales Team Member')['Total New ASV'].sum().reset_index().sort_values('Total New ASV', ascending=False)
 r['Rank'] = range(1, len(r) + 1)
 r['Total New ASV'] = r['Total New ASV'].map('${:,.2f}'.format)
 st.table(r[['Rank','Sales Team Member','Total New ASV']])
 
-# 15) Gráficos adicionais
+# 14) Gráficos adicionais
 extras = [
     ('Forecast Indicator','Pipeline por Forecast Indicator'),
     ('Licensing Program Type','Pipeline por Licensing Program Type'),
@@ -217,13 +227,15 @@ for col, title in extras:
     if col in df.columns:
         st.header(f'📊 {title}')
         dcol = df.groupby(col)['Total New ASV'].sum().reset_index()
-        fig = px.bar(dcol, x=col, y='Total New ASV', text='Total New ASV', template='plotly_dark', color=col, color_discrete_sequence=px.colors.qualitative.Vivid)
+        fig = px.bar(
+            dcol, x=col, y='Total New ASV', color=col,
+            color_discrete_sequence=px.colors.qualitative.Vivid,
+            template='plotly_dark', text='Total New ASV'
+        )
         fig.update_traces(texttemplate='%{text:,.2f}', textposition='inside')
         st.plotly_chart(fig, use_container_width=True)
-        html = fig.to_html(include_plotlyjs='cdn')
-        st.download_button('Download Chart (HTML)', html, file_name=f"{title.replace(' ','_').lower()}.html", mime='text/html')
 
-# 16) Dados Brutos e ficha detalhada
+# 15) Dados Brutos e ficha detalhada
 st.header('📋 Dados Brutos')
 disp = df.copy()
 gb = GridOptionsBuilder.from_dataframe(disp)
@@ -237,7 +249,7 @@ for col in numeric_cols:
         cellStyle={'textAlign':'right','color':'white','backgroundColor':'#000000'},
         cellRenderer=us_format
     )
-gb.configure_selection(selection_mode='single', use_checkbox=True)
+gb.configure_selection(selection_mode='single',use_checkbox=True)
 grid_resp = AgGrid(
     disp,
     gridOptions=gb.build(),
@@ -246,16 +258,20 @@ grid_resp = AgGrid(
     allow_unsafe_jscode=True,
     height=500
 )
-sel = grid_resp['selected_rows'] or []
-if sel:
-    rec = sel[0]
+sel = grid_resp['selected_rows']
+if isinstance(sel, pd.DataFrame):
+    sel_list = sel.to_dict('records')
+else:
+    sel_list = sel or []
+if sel_list:
+    rec = sel_list[0]
     st.markdown('---')
-    with st.expander(f"🗂 Ficha: {rec.get('Opportunity','')}", expanded=True):
+    with st.expander(f"🗂 Ficha: {rec.get('Opportunity','')}",expanded=True):
         highlights=['Stage','Total New ASV','Close Date','Total TSV','Original Close Date','Deal Registration ID','Owner','Total DMe Est HASV','Sales Team Member']
         cols=st.columns(3)
         for i,k in enumerate(highlights):
             with cols[i%3]:
-                st.markdown(f"<span style='color:#FFD700'><strong>{k}:</strong> {rec.get(k,'')}</span>", unsafe_allow_html=True)
+                st.markdown(f"<span style='color:#FFD700'><strong>{k}:</strong> {rec.get(k,'')}</span>",unsafe_allow_html=True)
         st.markdown('<hr/>',unsafe_allow_html=True)
         items=[(k,v) for k,v in rec.items() if k not in highlights+['Next Steps','Forecast Notes']]
         cols2=st.columns(3)
