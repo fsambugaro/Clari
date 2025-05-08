@@ -140,16 +140,13 @@ if edu_choice!='All': applied.append(f"Filtro EDU: {edu_choice}")
 if applied: st.markdown("**Filtros aplicados:** " + " | ".join(applied))
 
 # Funções de exportação
-buffer = io.BytesIO()
-# Usar openpyxl para evitar ausência do xlsxwriter
-with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-    df.to_excel(writer, index=False, sheet_name='Dados')
-buffer.seek(0)
+# Download dos dados filtrados em CSV (mais universal)
+csv_data = df.to_csv(index=False).encode('utf-8')
 st.download_button(
-    '⬇️ Baixar dados filtrados (Excel)',
-    data=buffer,
-    file_name=f'pipeline_{file.split('.csv')[0]}.xlsx',
-    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    '⬇️ Baixar dados filtrados (CSV)',
+    data=csv_data,
+    file_name=f'pipeline_{file.split(".csv")[0]}.csv',
+    mime='text/csv'
 )
 
 def export_plot(fig, name):
