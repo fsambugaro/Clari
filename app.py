@@ -183,7 +183,7 @@ if applied_filters:
         csv_data,
         file_name=f'pipeline_{file.replace(".csv","")}.csv',
         mime='text/csv'
-    )** " + " | ".join(applied_filters))
+    )
 
 # Helper to download plot as HTML
 def download_html(fig, name):
