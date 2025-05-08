@@ -85,27 +85,28 @@ if not file:
 
 df = load_data(file)
 
-# 7) Filtros básicos (com botão Reset)
-with st.sidebar.form(key='filter_form'):
-    st.header('🔍 Filters')
-    sel_member = st.selectbox('Sales Team Member', ['All'] + sorted(df['Sales Team Member'].unique()), key='sel_member')
-    sel_stages = st.multiselect(
-        'Sales Stage', stages,
-        default=[s for s in stages if s not in ['Closed - Clean Up','Closed - Lost']],
-        key='sel_stages'
-    )
-    sel_region = st.selectbox('Region', ['All','Brazil','Hispanic'], key='sel_region')
-    # Botões de aplicar e reset
-    apply = st.form_submit_button('Apply Filters')
-    reset = st.form_reset_button('Reset Filters')
-
-# Aplica filtros após envio do formulário
-if sel_member != 'All':
+# 7) Filtros básicos
+st.sidebar.header('🔍 Filtros')
+# Sales Team Member
+tmembers = ['Todos'] + sorted(df['Sales Team Member'].unique())
+sel_member = st.sidebar.selectbox('Sales Team Member', tmembers)
+if sel_member != 'Todos':
     df = df[df['Sales Team Member'] == sel_member]
+# Sales Stage (fechadas Clean Up e Lost desmarcadas por padrão, Closed - Booked marcado)
+stages = sorted(df['Stage'].unique())
+closed = ['Closed - Clean Up', 'Closed - Lost']  # Clean Up e Lost desmarcadas
+# Closed - Booked estará marcado por default
+default_stages = [s for s in stages if s not in closed]
+sel_stages = st.sidebar.multiselect('Sales Stage', stages, default=default_stages)
 if sel_stages:
     df = df[df['Stage'].isin(sel_stages)]
-if sel_region != 'All' and 'Sub Territory' in df.columns:
+# Region: Brazil / Hispanic
+regions = ['Todos', 'Brazil', 'Hispanic']
+sel_region = st.sidebar.selectbox('Region', regions)
+if sel_region != 'Todos' and 'Sub Territory' in df.columns:
     df = df[df['Sub Territory'].astype(str).str.contains(sel_region, case=False, na=False)]
+
+
 
 # 9) Filtros adicionais personalizados
 # --- Converter dias em número, evitar erro de bins
