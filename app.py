@@ -100,10 +100,18 @@ st.sidebar.button('🔄 Reset Filters', on_click=_reset)
 
 # Basic filters widgets
 members = ['All'] + sorted(df['Sales Team Member'].unique())
-sel_member = st.sidebar.selectbox('Sales Team Member', members, key='sel_member')
-sel_stages = st.sidebar.multiselect('Sales Stage', stages, default=default_stages, key='sel_stages')
+sel_member = st.sidebar.selectbox(
+    'Sales Team Member', members, index=0, key='sel_member'
+)
+sel_stages = st.sidebar.multiselect(
+    'Sales Stage', stages,
+    default=st.session_state.get('sel_stages', default_stages),
+    key='sel_stages'
+)
 regions = ['All','Brazil','Hispanic']
-sel_region = st.sidebar.selectbox('Region', regions, key='sel_region')
+sel_region = st.sidebar.selectbox(
+    'Region', regions, index=0, key='sel_region'
+)
 
 # Apply filters automatically
 if sel_member != 'All':
