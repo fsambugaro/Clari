@@ -277,14 +277,6 @@ grid_resp = AgGrid(
     allow_unsafe_jscode=True,
     height=500
 )
-# Download displayed raw data (filtered)
-csv_disp = disp.to_csv(index=False).encode('utf-8')
-st.download_button(
-    '⬇️ Download Displayed Raw Data (CSV)',
-    data=csv_disp,
-    file_name='displayed_raw_data.csv',
-    mime='text/csv'
-)
 sel = grid_resp['selected_rows']
 if isinstance(sel, pd.DataFrame):
     sel_list = sel.to_dict('records')
