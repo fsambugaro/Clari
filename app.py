@@ -93,11 +93,9 @@ default_stages = [s for s in stages if s not in ['Closed - Clean Up','Closed - L
 
 # Reset button for basic filters
 def reset_filters():
-    keys = ['sel_member','sel_stages','sel_region']
-    for k in keys:
-        if k in st.session_state:
-            del st.session_state[k]
-    st.experimental_rerun()
+    for k in ['sel_member','sel_stages','sel_region']:
+        st.session_state.pop(k, None)
+    # No explicit rerun; Streamlit will re-render with cleared state on next interaction
 st.sidebar.button('🔄 Reset Filters', on_click=reset_filters)
 
 # Basic filters widgets
