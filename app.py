@@ -125,17 +125,6 @@ if 'Account Name' in df.columns:
     sel_an = st.sidebar.selectbox('Account Name', ['All'] + sorted(df['Account Name'].dropna().unique()))
     if sel_an != 'All': df = df[df['Account Name'] == sel_an]
 
-# 9) EDU Filter
-# Re-add EDU filter radio to affect all downstream charts
-enum_df = df.copy()
-edu_choice = st.sidebar.radio('EDU Filter', ['All', 'EDU', 'Others'], index=0)
-if edu_choice == 'EDU':
-    df = enum_df[enum_df['Sub Territory'].astype(str).str.contains('EDU', case=False, na=False)]
-elif edu_choice == 'Others':
-    df = enum_df[~enum_df['Sub Territory'].astype(str).str.contains('EDU', case=False, na=False)]
-else:
-    df = enum_df
-
 # 9) Totals
 total_pipeline = df[df['Stage'].isin([
     '02 - Prospect', '03 - Opportunity Qualification', '04 - Circle of Influence',
