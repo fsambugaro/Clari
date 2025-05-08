@@ -76,10 +76,10 @@ def load_data(path):
     return df
 
 # 6) Seleção de CSV
-st.sidebar.header('📂 Selecione o CSV')
-file = st.sidebar.selectbox('Arquivo:', [''] + list_csv_files())
+st.sidebar.header('📂 Select CSV file')
+file = st.sidebar.selectbox('Files:', [''] + list_csv_files())
 if not file:
-    st.info('Selecione um CSV para continuar')
+    st.info('Select CSV file to continue')
     st.stop()
 
 df = load_data(file)
@@ -172,7 +172,7 @@ if applied_filters:
     st.markdown("**Filtros aplicados:** " + " | ".join(applied_filters))
 
 # 10) Pipeline por Fase
-st.header('🔍 Pipeline por Fase')
+st.header('🔍 Pipeline by Stage')
 order = [
     '02 - Prospect', '03 - Opportunity Qualification', '04 - Circle of Influence','05 - Solution Definition and Validation',
     '06 - Customer Commit', '07 - Execute to Close', 'Closed - Booked'
@@ -187,7 +187,7 @@ fig.update_traces(texttemplate='%{text:,.2f}', textposition='inside')
 st.plotly_chart(fig, use_container_width=True)
 
 # 11) Pipeline Semanal
-st.header('📈 Pipeline Semanal')
+st.header('📈 Weekly Pipeline Creation')
 dfw = df.dropna(subset=['Close Date']).copy()
 dfw['Week'] = dfw['Close Date'].dt.to_period('W').dt.to_timestamp()
 weekly = dfw.groupby('Week')['Total New ASV'].sum().reset_index()
@@ -196,7 +196,7 @@ fig.update_traces(texttemplate='%{y:,.2f}', textposition='top center')
 st.plotly_chart(fig, use_container_width=True)
 
 # 12) Pipeline Mensal
-st.header('📆 Pipeline Mensal')
+st.header('📆 Monthly Pipeline Creation')
 mon = dfw.copy()
 mon['Month'] = mon['Close Date'].dt.to_period('M').dt.to_timestamp()
 monthly = mon.groupby('Month')['Total New ASV'].sum().reset_index()
@@ -205,7 +205,7 @@ fig.update_traces(texttemplate='%{y:,.2f}', textposition='top center')
 st.plotly_chart(fig, use_container_width=True)
 
 # 13) Ranking de Vendedores
-st.header('🏆 Ranking de Vendedores')
+st.header('🏆 Sellers Ranking')
 r = df.groupby('Sales Team Member')['Total New ASV'].sum().reset_index().sort_values('Total New ASV', ascending=False)
 r['Rank'] = range(1, len(r) + 1)
 r['Total New ASV'] = r['Total New ASV'].map('${:,.2f}'.format)
@@ -213,10 +213,10 @@ st.table(r[['Rank','Sales Team Member','Total New ASV']])
 
 # 14) Gráficos adicionais
 extras = [
-    ('Forecast Indicator','Pipeline por Forecast Indicator'),
-    ('Licensing Program Type','Pipeline por Licensing Program Type'),
-    ('Licensing Program','Pipeline por Licensing Program'),
-    ('Major OLPG1','Pipeline por Major OLPG1')
+    ('Forecast Indicator','Pipeline by Forecast Indicator'),
+    ('Licensing Program Type','Pipeline by Licensing Program Type'),
+    ('Licensing Program','Pipeline by Licensing Program'),
+    ('Major OLPG1','Pipeline by Product')
 ]
 for col, title in extras:
     if col in df.columns:
@@ -231,7 +231,7 @@ for col, title in extras:
         st.plotly_chart(fig, use_container_width=True)
 
 # 15) Dados Brutos e ficha detalhada
-st.header('📋 Dados Brutos')
+st.header('📋 Raw Data')
 disp = df.copy()
 gb = GridOptionsBuilder.from_dataframe(disp)
 gb.configure_default_column(cellStyle={'color':'white','backgroundColor':'#000000'})
