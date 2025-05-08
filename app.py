@@ -104,7 +104,7 @@ if sel_stages:
 regions = ['Todos', 'Brazil', 'Hispanic']
 sel_region = st.sidebar.selectbox('Region', regions)
 if sel_region != 'Todos' and 'Sub Territory' in df.columns:
-    df = df[df['Sub Territory'].astype(str).str.contains(sel_region, case=False, na=False)].str.contains(sel_region, case=False, na=False)]
+    df = df[df['Sub Territory'].astype(str).str.contains(sel_region, case=False, na=False)]
 
 
 
