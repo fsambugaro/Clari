@@ -87,6 +87,10 @@ df = load_data(file)
 
 # 7) Filtros básicos
 st.sidebar.header('🔍 Filters')
+# Prepare default values
+stages = sorted(df['Stage'].unique())
+default_stages = [s for s in stages if s not in ['Closed - Clean Up','Closed - Lost']]
+
 # Reset button for basic filters
 def reset_basic_filters():
     st.session_state['sel_member'] = 'All'
@@ -99,8 +103,6 @@ if st.sidebar.button('🔄 Reset Filters'):
 # Basic filters widgets
 members = ['All'] + sorted(df['Sales Team Member'].unique())
 sel_member = st.sidebar.selectbox('Sales Team Member', members, key='sel_member')
-stages = sorted(df['Stage'].unique())
-default_stages = [s for s in stages if s not in ['Closed - Clean Up','Closed - Lost']]
 sel_stages = st.sidebar.multiselect('Sales Stage', stages, default=default_stages, key='sel_stages')
 regions = ['All','Brazil','Hispanic']
 sel_region = st.sidebar.selectbox('Region', regions, key='sel_region')
