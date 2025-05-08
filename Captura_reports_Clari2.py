@@ -16,18 +16,12 @@ from dotenv import load_dotenv
 
 # Configuração de logging
 logging.basicConfig(level=logging.INFO)
-
-# ----------------------------------------------------------------------------
-# Arquivo de ambiente: ~/.clari.env
-# CLARI_USER=seu_email@empresa.com
-# GITHUB_TOKEN=seu_personal_access_token
-# ----------------------------------------------------------------------------
 load_dotenv(os.path.expanduser("~/.clari.env"))
+
 CLARI_USER      = os.getenv("CLARI_USER")
 REPO_PATH       = os.path.expanduser("~/Documents/Clari")
 DOWNLOAD_FOLDER = os.path.expanduser("~/Downloads")
 
-# Relatórios e URLs
 REPORTS = [
     #("LATAM FY25 This Quarter all pipe", "LATAM_CQ_W{w}.csv"),
     #("LATAM FY25 NQ all pipe",         "LATAM_NQ_W{w}.csv"),
@@ -39,113 +33,154 @@ REPORT_URLS = {
     "Pipe LATAM FY25 full year":        "https://app.clari.com/opportunities/681c333553fea2471096c4ba",
 }
 
-# Calcula semana dentro do trimestre fiscal (Adobe fiscal year começa em dezembro)
 def week_in_quarter(dt: datetime.date) -> int:
-    fiscal_month = ((dt.month - 12) % 12) + 1
-    fiscal_year  = dt.year if dt.month == 12 else dt.year - 1
-    fiscal_quarter = (fiscal_month - 1) // 3
-    start_months = [12, 3, 6, 9]
-    start_month  = start_months[fiscal_quarter]
-    start_year   = fiscal_year if start_month == 12 else fiscal_year + 1
-    start_date   = datetime.date(start_year, start_month, 1)
-    return ((dt - start_date).days // 7) + 1
+    fm = ((dt.month - 12) % 12) + 1
+    fy = dt.year if dt.month == 12 else dt.year - 1
+    fq = (fm - 1) // 3
+    starts = [12, 3, 6, 9]
+    sm = starts[fq]
+    sy = fy if sm == 12 else fy + 1
+    sd = datetime.date(sy, sm, 1)
+    return ((dt - sd).days // 7) + 1
 
-# Função para baixar relatório via Selenium
 def download_report(driver, report_name: str, out_path: str):
     logging.info(f"*** Iniciando download: {report_name}")
     before = set(os.listdir(DOWNLOAD_FOLDER))
+    wait   = WebDriverWait(driver, 60)
 
-    # Fecha qualquer modal aberto
+    # Fecha modais
     try:
         driver.find_element(By.TAG_NAME, 'body').send_keys(Keys.ESCAPE)
         time.sleep(1)
     except:
         pass
 
-    # Navega para página do relatório
+    # Acessa relatório
     driver.get(REPORT_URLS[report_name])
-    wait = WebDriverWait(driver, 60)
     time.sleep(5)
 
-    # 1) Abre menu de ações (⋮)
-    menu_xpath = "/html/body/div[1]/div/div/div[1]/div[2]/div/div[1]/div/div[2]/div/div/div[4]/div/div/button"
-    wait.until(EC.element_to_be_clickable((By.XPATH, menu_xpath))).click()
+    # 1) Abre menu de ações
+    menu = wait.until(EC.element_to_be_clickable((By.XPATH,
+        "/html/body/div[1]/div/div/div[1]/div[2]/div/div[1]/div/div[2]/div/div/div[4]/div/div/button"
+    )))
+    menu.click()
     time.sleep(2)
 
-    # 2) Seleciona Export > CSV e aguarda processamento
-    export_xpath = "/html/body/div[5]/div/button[5]/div[2]/div"
-    wait.until(EC.element_to_be_clickable((By.XPATH, export_xpath))).click()
-    time.sleep(90)
+    if report_name != "Pipe LATAM FY25 full year":
+        # === fluxo original para primeiros dois relatórios ===
+        # 2) Export > CSV
+        export_xpath = "/html/body/div[5]/div/button[5]/div[2]/div"
+        wait.until(EC.element_to_be_clickable((By.XPATH, export_xpath))).click()
+        time.sleep(90)
 
-    # 3) Abre notificações para obter link
-    notif_xpath = "/html/body/div[1]/div/div/div[1]/nav/div[2]/div/button[1]"
-    wait.until(EC.element_to_be_clickable((By.XPATH, notif_xpath))).click()
-    time.sleep(2)
+        # 3) Abre notificações
+        notif_xpath = "/html/body/div[1]/div/div/div[1]/nav/div[2]/div/button[1]"
+        wait.until(EC.element_to_be_clickable((By.XPATH, notif_xpath))).click()
+        time.sleep(2)
 
-    # 4) Captura links de download no painel de notificações
-    if report_name == "Pipe LATAM FY25 full year":
-        # Ajuste: força o primeiro artigo, onde fica o SVG de download
-        notif_link_xpath = "/html/body/div[5]/div/div/div[2]/article[1]/div[3]/a"
+        # 4) Captura link fixo e dispara
+        link_xpath = "//div[@role='dialog']//article//div[3]/a"
+        link_el = wait.until(EC.element_to_be_clickable((By.XPATH, link_xpath)))
+        href = link_el.get_attribute('href') or link_el.get_attribute('data-url')
+        logging.info(f"Baixando via href: {href}")
+        driver.get(href)
+        time.sleep(1)
     else:
-        # Fluxo original para os demais relatórios
-        notif_link_xpath = "//div[@role='dialog']//article//div[3]/a"
+        # === fluxo especial para full year ===
+        # 2) Export > CSV
+        export_xpath = "/html/body/div[5]/div/button[5]/div[2]/div"
+        wait.until(EC.element_to_be_clickable((By.XPATH, export_xpath))).click()
+        time.sleep(90)
 
-    links = driver.find_elements(By.XPATH, notif_link_xpath)
-    if not links:
-        logging.warning("Nenhum link de download encontrado na notificação com XPath: %s", notif_link_xpath)
-    for link in links:
-        href = link.get_attribute('href') or link.get_attribute('data-url')
-        if href:
-            logging.info(f"Baixando via link direto: {href}")
-            driver.get(href)
-            time.sleep(1)
+        # 3) Abre notificações
+        notif_xpath = "/html/body/div[1]/div/div/div[1]/nav/div[2]/div/button[1]"
+        wait.until(EC.element_to_be_clickable((By.XPATH, notif_xpath))).click()
+        time.sleep(2)
 
-    # 5) Aguarda download do arquivo
-    timeout = 180
+        # 4) Loop: dispara download ao encontrar <a> com <svg>, encerra ao detectar arquivo
+        start = time.time()
+        downloaded_file = None
+        link_el = None
+
+        while time.time() - start < 180:
+            if not link_el:
+                anchors = driver.find_elements(By.XPATH, "//div[@role='dialog']//a")
+                for a in anchors:
+                    if a.find_elements(By.TAG_NAME, "svg"):
+                        link_el = a
+                        href = a.get_attribute("href") or a.get_attribute("data-url")
+                        logging.info(f"Link SVG detectado, disparando download: {href}")
+                        driver.get(href)
+                        time.sleep(1)
+                        break
+
+            # Verifica chegada do CSV
+            candidates = [
+                f for f in os.listdir(DOWNLOAD_FOLDER)
+                if f not in before and f.lower().endswith(".csv")
+            ]
+            if candidates:
+                downloaded_file = max(
+                    (os.path.join(DOWNLOAD_FOLDER, f) for f in candidates),
+                    key=os.path.getctime
+                )
+                break
+
+            # Aguarda e reclica notificações
+            time.sleep(5)
+            try:
+                driver.find_element(By.XPATH, notif_xpath).click()
+                time.sleep(1)
+            except:
+                pass
+
+        if not downloaded_file:
+            dump = f"debug_no_csv_{report_name.replace(' ', '_')}.html"
+            with open(dump, "w", encoding="utf-8") as f:
+                f.write(driver.page_source)
+            raise RuntimeError(f"Timeout aguardando CSV para {report_name}. Veja {dump}")
+
+        os.rename(downloaded_file, out_path)
+        logging.info(f"Relatório salvo em {out_path}")
+        return
+
+    # Para os dois primeiros, aguarda o CSV pós-link
     start = time.time()
     latest_file = None
-    while time.time() - start < timeout:
-        new_files = [
+    while time.time() - start < 180:
+        new = [
             f for f in os.listdir(DOWNLOAD_FOLDER)
             if f not in before and f.lower().endswith('.csv')
         ]
-        if new_files:
+        if new:
             latest_file = max(
-                (os.path.join(DOWNLOAD_FOLDER, f) for f in new_files),
+                (os.path.join(DOWNLOAD_FOLDER, f) for f in new),
                 key=os.path.getctime
             )
             break
         time.sleep(1)
-    if not latest_file:
-        raise RuntimeError(f"Timeout: CSV não encontrado para {report_name}")
 
-    # Move para repositório e renomeia
+    if not latest_file:
+        raise RuntimeError(f"Timeout aguardando CSV para {report_name}")
+
     os.rename(latest_file, out_path)
     logging.info(f"Relatório salvo em {out_path}")
 
-    # Fecha modal/notificações
-    try:
-        driver.find_element(By.TAG_NAME, 'body').send_keys(Keys.ESCAPE)
-    except:
-        pass
-
-# Execução principal
 def main():
     week = week_in_quarter(datetime.date.today())
+    opts = Options()
+    srv  = Service(ChromeDriverManager().install())
+    drv  = webdriver.Chrome(service=srv, options=opts)
 
-    opts    = Options()
-    service = Service(ChromeDriverManager().install())
-    driver  = webdriver.Chrome(service=service, options=opts)
-
-    driver.get("https://app.clari.com/login")
-    print("Faça login manualmente (email+Okta) e aguarde o dashboard carregar...")
-    input("Pressione Enter para continuar...")
+    drv.get("https://app.clari.com/login")
+    print("Faça login manualmente (email+Okta) e pressione Enter para continuar...")
+    input()
 
     for title, tpl in REPORTS:
-        output = os.path.join(REPO_PATH, tpl.format(w=week))
-        download_report(driver, title, output)
+        out = os.path.join(REPO_PATH, tpl.format(w=week))
+        download_report(drv, title, out)
 
-    driver.quit()
+    drv.quit()
 
     repo = Repo(REPO_PATH)
     repo.git.add(A=True)
