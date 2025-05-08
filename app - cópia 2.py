@@ -252,9 +252,8 @@ for col, title in extras:
         )
         fig.update_traces(texttemplate='%{text:,.2f}', textposition='inside')
         st.plotly_chart(fig, use_container_width=True)
-        download_html(fig, title.replace(' ', '_').lower())
 
-# 15) Dados Brutos e ficha detalhada e ficha detalhada
+# 15) Dados Brutos e ficha detalhada
 st.header('📋 Dados Brutos')
 disp = df.copy()
 gb = GridOptionsBuilder.from_dataframe(disp)
