@@ -93,10 +93,7 @@ default_stages = [s for s in stages if s not in ['Closed - Clean Up','Closed - L
 
 # Reset button for basic filters
 if st.sidebar.button('🔄 Reset Filters'):
-    for key in ['sel_member', 'sel_stages', 'sel_region']:
-        if key in st.session_state:
-            del st.session_state[key]
-    st.experimental_rerun()
+    st.session_state.clear()
 
 # Basic filters widgets
 members = ['All'] + sorted(df['Sales Team Member'].unique())
