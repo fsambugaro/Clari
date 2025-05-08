@@ -190,7 +190,7 @@ for col, title in extras:
     if col in df.columns:
         st.header(f'📊 {title}')
         dcol = df.groupby(col)['Total New ASV'].sum().reset_index()
-        fig = px.bar(dcol, x=col, y='Total New ASV', text='Total New ASV', template='plotly_dark', color=col, color_discrete_sequence=px.colors.qualitative.Vivid)
+        fig = px.bar(dcol, x=col, y='Total New ASV', text='Total New ASV', template='plotly_dark')
         fig.update_traces(texttemplate='%{text:,.2f}', textposition='inside')
         st.plotly_chart(fig, use_container_width=True)
         html = fig.to_html(include_plotlyjs='cdn')
