@@ -155,7 +155,7 @@ st.header('📈 Weekly Pipeline')
 dfw = df.dropna(subset=['Close Date']).copy()
 dfw['Week'] = dfw['Close Date'].dt.to_period('W').dt.to_timestamp()
 weekly = dfw.groupby('Week')['Total New ASV'].sum().reset_index()
-fig = px.line(weekly, x='Week', y='Total New ASV', markers=True, template='plotly_dark', text='Total New ASV', color_discrete_sequence=px.colors.qualitative.Vivid)
+fig = px.line(weekly, x='Week', y='Total New ASV', markers=True, template='plotly_dark', text='Total New ASV')
 fig.update_traces(texttemplate='%{y:,.2f}', textposition='top center')
 st.plotly_chart(fig, use_container_width=True)
 html = fig.to_html(include_plotlyjs='cdn')
@@ -166,7 +166,7 @@ st.header('📆 Monthly Pipeline')
 mon = dfw.copy()
 mon['Month'] = mon['Close Date'].dt.to_period('M').dt.to_timestamp()
 monthly = mon.groupby('Month')['Total New ASV'].sum().reset_index()
-fig = px.line(monthly, x='Month', y='Total New ASV', markers=True, template='plotly_dark', text='Total New ASV', color_discrete_sequence=px.colors.qualitative.Vivid)
+fig = px.line(monthly, x='Month', y='Total New ASV', markers=True, template='plotly_dark', text='Total New ASV')
 fig.update_traces(texttemplate='%{y:,.2f}', textposition='top center')
 st.plotly_chart(fig, use_container_width=True)
 html = fig.to_html(include_plotlyjs='cdn')
@@ -219,7 +219,7 @@ grid_resp = AgGrid(
     disp,
     gridOptions=gb.build(),
     theme='streamlit-dark',
-    update_mode=GridOptionsBuilder.GridUpdateMode.SELECTION_CHANGED,
+    update_mode=GridUpdateMode.SELECTION_CHANGED,
     allow_unsafe_jscode=True,
     height=500
 )
