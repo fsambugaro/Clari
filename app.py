@@ -91,17 +91,8 @@ st.sidebar.header('🔍 Filters')
 stages = sorted(df['Stage'].unique())
 default_stages = [s for s in stages if s not in ['Closed - Clean Up','Closed - Lost']]
 
-# Reset button for basic filters
-def reset_filters():
-    for k in ['sel_member','sel_stages','sel_region']:
-        st.session_state.pop(k, None)
-    # No explicit rerun; Streamlit will re-render with cleared state on next interaction
-# Reset Filters button
-reset_pressed = st.sidebar.button('🔄 Reset Filters')
-if reset_pressed:
-    for k in ['sel_member','sel_stages','sel_region']:
-        st.session_state.pop(k, None)
-    st.experimental_rerun()
+# Reset Filters button: simply rerun to defaults
+st.sidebar.button('🔄 Reset Filters', on_click=st.experimental_rerun)
 
 # Basic filters widgets
 members = ['All'] + sorted(df['Sales Team Member'].unique())
