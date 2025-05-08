@@ -92,8 +92,11 @@ stages = sorted(df['Stage'].unique())
 default_stages = [s for s in stages if s not in ['Closed - Clean Up','Closed - Lost']]
 
 # Reset button for basic filters
-if st.sidebar.button('🔄 Reset Filters'):
+def _reset():
     st.session_state.clear()
+
+# Button with on_click to clear state and rerun
+st.sidebar.button('🔄 Reset Filters', on_click=_reset)
 
 # Basic filters widgets
 members = ['All'] + sorted(df['Sales Team Member'].unique())
