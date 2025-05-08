@@ -86,29 +86,27 @@ if not file:
 df = load_data(file)
 
 # 7) Filtros básicos
-st.sidebar.header('🔍 Filters')
-
-# Reset Filters: reload the entire app (visual state fully reset)
-# no session_state is preserved because keys are removed below
-if st.sidebar.button('🔄 Reset Filters', key='reset'):
-    st.experimental_rerun()
-
-# Basic filters widgets (no explicit keys so they reset on reload)
-members = ['All'] + sorted(df['Sales Team Member'].unique())
-sel_member = st.sidebar.selectbox('Sales Team Member', members, index=0)
-stages = sorted(df['Stage'].unique())
-default_stages = [s for s in stages if s not in ['Closed - Clean Up','Closed - Lost']]
-sel_stages = st.sidebar.multiselect('Sales Stage', stages, default=default_stages)
-regions = ['All','Brazil','Hispanic']
-sel_region = st.sidebar.selectbox('Region', regions, index=0)
-
-# Apply filters automatically
-if sel_member != 'All':
+st.sidebar.header('🔍 Filtros')
+# Sales Team Member
+tmembers = ['Todos'] + sorted(df['Sales Team Member'].unique())
+sel_member = st.sidebar.selectbox('Sales Team Member', tmembers)
+if sel_member != 'Todos':
     df = df[df['Sales Team Member'] == sel_member]
+# Sales Stage (fechadas Clean Up e Lost desmarcadas por padrão, Closed - Booked marcado)
+stages = sorted(df['Stage'].unique())
+closed = ['Closed - Clean Up', 'Closed - Lost']  # Clean Up e Lost desmarcadas
+# Closed - Booked estará marcado por default
+default_stages = [s for s in stages if s not in closed]
+sel_stages = st.sidebar.multiselect('Sales Stage', stages, default=default_stages)
 if sel_stages:
     df = df[df['Stage'].isin(sel_stages)]
-if sel_region != 'All' and 'Sub Territory' in df.columns:
+# Region: Brazil / Hispanic
+regions = ['Todos', 'Brazil', 'Hispanic']
+sel_region = st.sidebar.selectbox('Region', regions)
+if sel_region != 'Todos' and 'Sub Territory' in df.columns:
     df = df[df['Sub Territory'].astype(str).str.contains(sel_region, case=False, na=False)]
+
+
 
 # 9) Filtros adicionais personalizados
 # --- Converter dias em número, evitar erro de bins
