@@ -39,8 +39,18 @@ st.markdown(
 # 2) Título
 st.title("📊 LATAM Pipeline Dashboard")
 
-# 3) Caminho dos CSVs — agora busca em ~/Documents/Clari/Data
-DIR = os.path.join(os.path.expanduser("~"), "Documents", "Clari", "Data")
+import os
+import streamlit as st  # já deve estar importado
+
+# 3) Caminho dos CSVs — busca na subpasta "Data" ao lado do app.py
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DIR = os.path.join(BASE_DIR, "Data")
+
+# Se a pasta não existir, interrompe com mensagem amigável
+if not os.path.isdir(DIR):
+    st.error(f"🚨 Pasta de dados não encontrada: {DIR}")
+    st.stop()
+
 
 
 # 4) Lista de CSVs disponíveis
