@@ -39,8 +39,9 @@ st.markdown(
 # 2) Título
 st.title("📊 LATAM Pipeline Dashboard")
 
-# 3) Caminho dos CSVs) Caminho dos CSVs
-DIR = os.getcwd()
+# 3) Caminho dos CSVs — agora busca em ~/Documents/Clari/Data
+DIR = os.path.join(os.path.expanduser("~"), "Documents", "Clari", "Data")
+
 
 # 4) Lista de CSVs disponíveis
 @st.cache_data
