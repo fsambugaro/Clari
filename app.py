@@ -144,10 +144,12 @@ if 'Forecast Indicator' in df.columns:
 
 # --- 9.3) Deal Registration ID
 if 'Deal Registration ID' in df.columns:
-    sel_drid = st.sidebar.selectbox(
-        'Deal Registration ID',
-        ['Todos'] + sorted(df['Deal Registration ID'].dropna().unique())
-    )
+   sel_drid = st.sidebar.selectbox(
+    'Deal Registration ID',
+    ['Todos'] + sorted(df['Deal Registration ID'].dropna().unique()),
+    key='filter_deal_registration_id'
+)
+
     if sel_drid != 'Todos':
         df = df[df['Deal Registration ID'] == sel_drid]
 
