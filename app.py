@@ -413,12 +413,18 @@ resp = AgGrid(
     key='commit_deals_grid'
 )
 
-# 4) Atualiza sessão com novos selecionados
-new_sel = resp['selected_rows'] or []
-for row in new_sel:
+# 4) Atualiza sessão com novos selecionados (tratando DataFrame ou lista)
+raw_sel = resp['selected_rows']
+if isinstance(raw_sel, pd.DataFrame):
+    sel_list = raw_sel.to_dict('records')
+else:
+    sel_list = raw_sel or []
+
+for row in sel_list:
     drid = row['Deal Registration ID']
     if drid not in st.session_state['commit_ids']:
         st.session_state['commit_ids'].append(drid)
+
 
 # 5) Reconstrói commit_df a partir dos IDs na sessão
 commit_df = commit_disp[
