@@ -6,6 +6,16 @@ import os
 import io
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
 
+# formata números no estilo US (com vírgulas de milhar e 2 casas decimais)
+us_format = JsCode(
+    "function(params){"
+    "  return params.value!=null"
+    "    ? params.value.toLocaleString('en-US',"
+    "      {minimumFractionDigits:2,maximumFractionDigits:2})"
+    "    : '';"
+    "}"
+)
+
 # 1) Configurações iniciais
 st.set_page_config(page_title="Dashboard Pipeline LATAM", layout="wide")
 # CSS para tema escuro geral e AgGrid
