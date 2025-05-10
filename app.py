@@ -372,13 +372,15 @@ if sel_list:
         st.markdown("<span style='color:#FFD700'><strong>Forecast Notes:</strong></span>",unsafe_allow_html=True)
         st.write(rec.get('Forecast Notes',''))
 
-
-# 16) Commit Deals
-# --- bloco novo: seleção de Committed Deals (mantém #15 intacto)
+# 16) Seleção e exibição de Committed Deals
 st.markdown('---')
 st.header('✅ Seleção de Committed Deals')
 
-# monta apenas as colunas de interesse
+# 1) Inicializa seleção persistente
+if 'commit_ids' not in st.session_state:
+    st.session_state['commit_ids'] = []
+
+# 2) DataFrame base com as colunas de interesse
 commit_disp = df[[
     'Deal Registration ID',
     'Opportunity',
@@ -388,57 +390,43 @@ commit_disp = df[[
     'Total New ASV',
     'Next Steps'
 ]].copy()
+# trunca Next Steps para 50 caracteres
+commit_disp['Next Steps'] = commit_disp['Next Steps'].astype(str).str.slice(0, 50)
 
-# ← INSIRA AQUI o truncamento de Next Steps
-commit_disp['Next Steps'] = (
-    commit_disp['Next Steps']
-    .astype(str)
-    .str.slice(0, 50)
-)
-
-
-# configura AgGrid para seleção múltipla
+# 3) Exibe AgGrid para adicionar novos IDs
 commit_gb = GridOptionsBuilder.from_dataframe(commit_disp)
 commit_gb.configure_default_column(cellStyle={'color':'white','backgroundColor':'#000000'})
-# formata numéricos
-for col in ['Total New ASV']:
-    commit_gb.configure_column(
-        col,
-        type=['numericColumn','numberColumnFilter'],
-        cellStyle={'textAlign':'right','color':'white','backgroundColor':'#000000'},
-        cellRenderer=us_format
-    )
-# habilita múltipla seleção
+commit_gb.configure_column(
+    'Total New ASV',
+    type=['numericColumn','numberColumnFilter'],
+    cellStyle={'textAlign':'right','color':'white','backgroundColor':'#000000'},
+    cellRenderer=us_format
+)
 commit_gb.configure_selection(selection_mode='multiple', use_checkbox=True)
-
-# exibe grid
-commit_resp = AgGrid(
+resp = AgGrid(
     commit_disp,
     gridOptions=commit_gb.build(),
     theme='streamlit-dark',
     update_mode=GridUpdateMode.SELECTION_CHANGED,
     allow_unsafe_jscode=True,
     height=300,
-    key='commit_deals_grid'       # ← adiciona um key único aqui
+    key='commit_deals_grid'
 )
 
+# 4) Atualiza sessão com novos selecionados
+new_sel = resp['selected_rows'] or []
+for row in new_sel:
+    drid = row['Deal Registration ID']
+    if drid not in st.session_state['commit_ids']:
+        st.session_state['commit_ids'].append(drid)
 
-# captura seleção (tratando DataFrame ou lista)
-sel_raw = commit_resp['selected_rows']
-if isinstance(sel_raw, pd.DataFrame):
-    sel_list = sel_raw.to_dict('records')
-else:
-    sel_list = sel_raw or []
+# 5) Reconstrói commit_df a partir dos IDs na sessão
+commit_df = commit_disp[
+    commit_disp['Deal Registration ID'].isin(st.session_state['commit_ids'])
+]
 
-if sel_list:
-    commit_df = pd.DataFrame(sel_list)
-else:
-    commit_df = pd.DataFrame(columns=commit_disp.columns)
-
-
-# mostra Committed Deals
+# 6) Exibe Committed Deals e botão de download
 st.subheader('📋 Committed Deals')
-# formata Total New ASV em US e alinha à direita
 styled = (
     commit_df
     .style
@@ -447,14 +435,12 @@ styled = (
 )
 st.dataframe(styled, use_container_width=True)
 
-
-# botão de download
 csv_commit = commit_df.to_csv(index=False).encode('utf-8')
 st.download_button(
     '⬇️ Download Committed Deals (CSV)',
     data=csv_commit,
     file_name='committed_deals.csv',
     mime='text/csv',
-    key='download_committed_deals'  # ← key único pro botão
+    key='download_committed_deals'
 )
 
