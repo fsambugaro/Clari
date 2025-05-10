@@ -118,17 +118,53 @@ if sel_region != 'Todos' and 'Sub Territory' in df.columns:
     df = df[df['Sub Territory'].astype(str).str.contains(sel_region, case=False, na=False)]
 
 
-
 # 9) Filtros adicionais personalizados
-# --- Converter dias em número, evitar erro de bins
-if 'Days Since Next Steps Modified' in df.columns:
-    df['Days Since Next Steps Modified'] = pd.to_numeric(
-        df['Days Since Next Steps Modified'], errors='coerce'
-    )
 st.sidebar.header('🔧 Filtros adicionais')
+
+# --- 9.1) Fiscal Quarter
 if 'Fiscal Quarter' in df.columns:
-    sel_fq = st.sidebar.selectbox('Fiscal Quarter', ['Todos'] + sorted(df['Fiscal Quarter'].dropna().unique()))
-    if sel_fq != 'Todos': df = df[df['Fiscal Quarter'] == sel_fq]
+    sel_fq = st.sidebar.selectbox(
+        'Fiscal Quarter',
+        ['Todos'] + sorted(df['Fiscal Quarter'].dropna().unique())
+    )
+    if sel_fq != 'Todos':
+        df = df[df['Fiscal Quarter'] == sel_fq]
+
+# ←── 9.2) Forecast Indicator (cole exatamente este bloco) ──→
+if 'Forecast Indicator' in df.columns:
+    options_fc = sorted(df['Forecast Indicator'].dropna().unique())
+    sel_fc = st.sidebar.multiselect(
+        'Forecast Indicator',
+        options_fc,
+        default=options_fc
+    )
+    if sel_fc:
+        df = df[df['Forecast Indicator'].isin(sel_fc)]
+# ←─────────────────────────────────────────────────────────→
+
+# --- 9.3) Deal Registration ID
+if 'Deal Registration ID' in df.columns:
+    sel_drid = st.sidebar.selectbox(
+        'Deal Registration ID',
+        ['Todos'] + sorted(df['Deal Registration ID'].dropna().unique())
+    )
+    if sel_drid != 'Todos':
+        df = df[df['Deal Registration ID'] == sel_drid]
+
+# --- 9.4) Dias desde Next Steps
+if 'Days Since Next Steps Modified' in df.columns:
+    labels = ['<=7 dias', '8-14 dias', '15-30 dias', '>30 dias']
+    df['DaysGroup'] = pd.cut(
+        df['Days Since Next Steps Modified'],
+        bins=[0,7,14,30,float('inf')],
+        labels=labels
+    )
+    sel_dg = st.sidebar.selectbox('Dias desde Next Steps', ['Todos'] + labels)
+    if sel_dg != 'Todos':
+        df = df[df['DaysGroup'] == sel_dg]
+
+# ... siga com os demais filtros abaixo ...
+
 
 
 if 'Deal Registration ID' in df.columns:
