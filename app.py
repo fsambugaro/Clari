@@ -386,7 +386,15 @@ else:
 
 # mostra Committed Deals
 st.subheader('📋 Committed Deals')
-st.table(commit_df)
+# formata Total New ASV em US e alinha à direita
+styled = (
+    commit_df
+    .style
+    .format({'Total New ASV': '${:,.2f}'})
+    .set_properties(subset=['Total New ASV'], **{'text-align': 'right'})
+)
+st.dataframe(styled, use_container_width=True)
+
 
 # botão de download
 csv_commit = commit_df.to_csv(index=False).encode('utf-8')
