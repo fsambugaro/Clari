@@ -129,18 +129,9 @@ st.sidebar.header('🔧 Filtros adicionais')
 if 'Fiscal Quarter' in df.columns:
     sel_fq = st.sidebar.selectbox('Fiscal Quarter', ['Todos'] + sorted(df['Fiscal Quarter'].dropna().unique()))
     if sel_fq != 'Todos': df = df[df['Fiscal Quarter'] == sel_fq]
-
-st.subheader('📋 Committed Deals')
-# formata Total New ASV em US e alinha à direita
-styled = (
-    commit_df
-    .style
-    .format({'Total New ASV': '${:,.2f}'})
-    .set_properties(subset=['Total New ASV'], **{'text-align': 'right'})
-)
-st.dataframe(styled, use_container_width=True)
-
-
+if 'Forecast Indicator' in df.columns:
+    sel_fc = st.sidebar.selectbox('Forecast Indicator', ['Todos'] + sorted(df['Forecast Indicator'].dropna().unique()))
+    if sel_fc != 'Todos': df = df[df['Forecast Indicator'] == sel_fc]
 if 'Deal Registration ID' in df.columns:
     sel_drid = st.sidebar.selectbox('Deal Registration ID', ['Todos'] + sorted(df['Deal Registration ID'].dropna().unique()))
     if sel_drid != 'Todos': df = df[df['Deal Registration ID'] == sel_drid]
@@ -185,8 +176,7 @@ if sel_member != 'Todos': applied_filters.append(f"Sales Team Member: {sel_membe
 if sel_region != 'Todos': applied_filters.append(f"Region: {sel_region}")
 # Filtros adicionais personalizados
 if 'sel_fq' in locals() and sel_fq != 'Todos': applied_filters.append(f"Fiscal Quarter: {sel_fq}")
-if 'sel_fc' in locals() and sel_fc:
-    applied_filters.append(f"Forecast Indicator: {', '.join(sel_fc)}")
+if 'sel_fc' in locals() and sel_fc != 'Todos': applied_filters.append(f"Forecast Indicator: {sel_fc}")
 if 'sel_drid' in locals() and sel_drid != 'Todos': applied_filters.append(f"Deal Registration ID: {sel_drid}")
 if 'sel_dg' in locals() and sel_dg != 'Todos': applied_filters.append(f"Dias desde Next Steps: {sel_dg}")
 if 'sel_lpt' in locals() and sel_lpt != 'Todos': applied_filters.append(f"Licensing Program Type: {sel_lpt}")
