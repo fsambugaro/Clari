@@ -339,6 +339,14 @@ commit_disp = df[[
     'Next Steps'
 ]].copy()
 
+# ← INSIRA AQUI o truncamento de Next Steps
+commit_disp['Next Steps'] = (
+    commit_disp['Next Steps']
+    .astype(str)
+    .str.slice(0, 50)
+)
+
+
 # configura AgGrid para seleção múltipla
 commit_gb = GridOptionsBuilder.from_dataframe(commit_disp)
 commit_gb.configure_default_column(cellStyle={'color':'white','backgroundColor':'#000000'})
