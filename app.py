@@ -363,12 +363,18 @@ commit_resp = AgGrid(
     height=300
 )
 
-# captura seleção
-commit_sel = commit_resp['selected_rows'] or []
-if commit_sel:
-    commit_df = pd.DataFrame(commit_sel)
+# captura seleção (tratando DataFrame ou lista)
+sel_raw = commit_resp['selected_rows']
+if isinstance(sel_raw, pd.DataFrame):
+    sel_list = sel_raw.to_dict('records')
+else:
+    sel_list = sel_raw or []
+
+if sel_list:
+    commit_df = pd.DataFrame(sel_list)
 else:
     commit_df = pd.DataFrame(columns=commit_disp.columns)
+
 
 # mostra Committed Deals
 st.subheader('📋 Committed Deals')
