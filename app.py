@@ -440,8 +440,10 @@ commit_resp = AgGrid(
     theme='streamlit-dark',
     update_mode=GridUpdateMode.SELECTION_CHANGED,
     allow_unsafe_jscode=True,
-    height=300
+    height=300,
+    key='commit_deals_grid'       # ← adiciona um key único aqui
 )
+
 
 # captura seleção (tratando DataFrame ou lista)
 sel_raw = commit_resp['selected_rows']
@@ -475,5 +477,6 @@ st.download_button(
     data=csv_commit,
     file_name='committed_deals.csv',
     mime='text/csv'
+    key='download_committed_deals'  # ← key único pro botão
 )
 
