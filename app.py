@@ -154,25 +154,27 @@ if 'Deal Registration ID' in df.columns:
         df = df[df['Deal Registration ID'] == sel_drid]
 
 # --- 9.4) Dias desde Next Steps
+
 if 'Days Since Next Steps Modified' in df.columns:
     labels = ['<=7 dias', '8-14 dias', '15-30 dias', '>30 dias']
+    # 1) Garante float e preenche nulos com 0
+    df['Days Since Next Steps Modified'] = pd.to_numeric(
+        df['Days Since Next Steps Modified'], errors='coerce'
+    ).fillna(0)
+    # 2) Agrupa em bins, incluindo o menor valor
     df['DaysGroup'] = pd.cut(
         df['Days Since Next Steps Modified'],
         bins=[0,7,14,30,float('inf')],
-        labels=labels
+        labels=labels,
+        include_lowest=True
     )
- 
-
     sel_dg = st.sidebar.selectbox(
-	'Dias desde Next Steps',
+        'Dias desde Next Steps',
         ['Todos'] + labels,
         key='filter_days_since_next_steps'
     )
     if sel_dg != 'Todos':
-       	df = df[df['DaysGroup'] == sel_dg]
-
-
-
+        df = df[df['DaysGroup'] == sel_dg]
 
 # ... siga com os demais filtros abaixo ...
 
