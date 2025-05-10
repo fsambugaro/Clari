@@ -476,7 +476,7 @@ st.download_button(
     '⬇️ Download Committed Deals (CSV)',
     data=csv_commit,
     file_name='committed_deals.csv',
-    mime='text/csv'
+    mime='text/csv',
     key='download_committed_deals'  # ← key único pro botão
 )
 
