@@ -161,9 +161,18 @@ if 'Days Since Next Steps Modified' in df.columns:
         bins=[0,7,14,30,float('inf')],
         labels=labels
     )
-    sel_dg = st.sidebar.selectbox('Dias desde Next Steps', ['Todos'] + labels)
+ 
+
+    sel_dg = st.sidebar.selectbox(
+	'Dias desde Next Steps',
+        ['Todos'] + labels,
+        key='filter_days_since_next_steps'
+    )
     if sel_dg != 'Todos':
-        df = df[df['DaysGroup'] == sel_dg]
+       	df = df[df['DaysGroup'] == sel_dg]
+
+
+
 
 # ... siga com os demais filtros abaixo ...
 
