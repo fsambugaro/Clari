@@ -340,7 +340,7 @@ for col, title in extras:
 st.markdown("---")
 st.header("✅ Upside deals to reach commit")
 
-# --- inicializa o dicionário por vendedor ---
+# inicializa o dicionário por vendedor
 if "commit_ids_by_member" not in st.session_state:
     try:
         with open(SAVE_FILE, "r") as f:
@@ -348,21 +348,21 @@ if "commit_ids_by_member" not in st.session_state:
     except FileNotFoundError:
         st.session_state["commit_ids_by_member"] = {}
 
+# determina o vendedor atual (ou __ALL__ se Todos)
 current_member = sel_member if sel_member != "Todos" else "__ALL__"
 st.session_state["commit_ids_by_member"].setdefault(current_member, [])
 
-# 1) DataFrame base idêntico ao “Dados Brutos”, mas filtrado a Upside/U-Targeted  
-commit_disp = df.copy()
-commit_disp = commit_disp[
-    commit_disp["Forecast Indicator"].isin(["Upside", "Upside - Targeted"])
-    & ~commit_disp["Stage"].isin(["Closed - Booked", "07 - Execute to Close", "02 - Prospect"])
-]
+# 1) DataFrame base idêntico ao “Dados Brutos”, mas só Upside/U-Targeted
+commit_disp = df[
+    df["Forecast Indicator"].isin(["Upside", "Upside - Targeted"])
+    & ~df["Stage"].isin(["Closed - Booked", "07 - Execute to Close", "02 - Prospect"])
+].copy()
 
-# 2) adiciona coluna booleana “Commit?” marcada se o ID estiver em sessão  
+# 2) coluna “Commit?” pré-marcada conforme o que já está salvo
 saved = st.session_state["commit_ids_by_member"][current_member]
 commit_disp["Commit?"] = commit_disp["Deal Registration ID"].astype(str).isin(saved)
 
-# 3) exibe no data_editor, sem índice, com checkbox na coluna “Commit?”  
+# 3) mostra editor com checkbox na coluna “Commit?”
 edited = st.data_editor(
     commit_disp,
     column_config={
@@ -374,56 +374,49 @@ edited = st.data_editor(
     use_container_width=True,
 )
 
-# 4) lê de volta os IDs marcados e atualiza sessão + disco  
-chosen = edited.loc[edited["Commit?"], "Deal Registration ID"].astype(str).tolist()
+# 4) atualiza sessão + salva em disco os IDs marcados
+chosen = (
+    edited.loc[edited["Commit?"], "Deal Registration ID"]
+    .astype(str)
+    .tolist()
+)
 st.session_state["commit_ids_by_member"][current_member] = chosen
-
 with open(SAVE_FILE, "w") as f:
     json.dump(st.session_state["commit_ids_by_member"], f)
 
-# 5) monta o DataFrame final selecionado e exibe soma + tabela  
+# 5) monta o DataFrame final só com os selecionados e exibe soma + tabela
 commit_df = edited.loc[edited["Commit?"], commit_disp.columns]
 total_asv = commit_df["Total New ASV"].sum()
 st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
 
-# 1) Monta o gridOptions para o commit_df
+# estiliza e exibe via AgGrid
 gb2 = GridOptionsBuilder.from_dataframe(commit_df)
 gb2.configure_default_column(
-    cellStyle={'color':'white','backgroundColor':'#000000'}
+    cellStyle={"color": "white", "backgroundColor": "#000000"}
 )
 gb2.configure_column(
-    'Total New ASV',
-    type=['numericColumn','numberColumnFilter'],
-    cellStyle={'textAlign':'right','color':'white','backgroundColor':'#000000'},
+    "Total New ASV",
+    type=["numericColumn", "numberColumnFilter"],
+    cellStyle={"textAlign": "right", "color": "white", "backgroundColor": "#000000"},
     cellRenderer=JsCode(
         "function(params){"
         "  return params.value!=null"
         "    ? params.value.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})"
         "    : '';"
         "}"
-    )
+    ),
 )
-gb2.configure_selection('multiple', use_checkbox=True)
+gb2.configure_selection("multiple", use_checkbox=True)
 
-grid2 = AgGrid(
+_ = AgGrid(
     commit_df,
     gridOptions=gb2.build(),
-    theme='streamlit-dark',
+    theme="streamlit-dark",
     update_mode=GridUpdateMode.SELECTION_CHANGED,
     allow_unsafe_jscode=True,
     height=300,
-    key='commit_selected_grid'
+    key=f"commit_selected_grid_{current_member}",
 )
-
-# 2) Captura o que foi selecionado
-sel2 = grid2['selected_rows']
-if isinstance(sel2, pd.DataFrame):
-    sel2 = sel2.to_dict('records')
-else:
-    sel2 = sel2 or []
-
-st.write(f"Você selecionou {len(sel2)} deals:")
-st.write(sel2)
 
 
 
