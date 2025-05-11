@@ -329,8 +329,11 @@ for col, title in extras:
 st.markdown('---')
 st.header('✅ Upside deals to reach commit')
 
-# 1) DataFrame base só com os Upside deals
-commit_disp = df[df.get('Forecast Indicator','') == 'Upside'][[
+# 1) DataFrame base só com os Upside deals ainda abertos
+commit_disp = df[
+    (df.get('Forecast Indicator','') == 'Upside') &
+    (~df['Stage'].isin(['Closed - Booked', '07 - Execute to Close', '02 - Prospect']))
+][[
     'Deal Registration ID',
     'Opportunity',
     'Sales Team Member',
@@ -339,6 +342,7 @@ commit_disp = df[df.get('Forecast Indicator','') == 'Upside'][[
     'Total New ASV',
     'Next Steps'
 ]].copy()
+
 commit_disp['Next Steps'] = commit_disp['Next Steps'].astype(str).str.slice(0,50)
 
 # 2) Exibe AgGrid para selecionar múltiplos Upside deals
