@@ -336,7 +336,7 @@ for col, title in extras:
         download_html(fig, title.replace(' ', '_').lower())
 
 
-# 15) Seleção e exibição de Committed Deals por vendedor
+# 15) Seleção e exibição de Committed Deals por vendedor (igual ao raw + checkbox)
 st.markdown("---")
 st.header("✅ Upside deals to reach commit")
 
@@ -348,70 +348,48 @@ if "commit_ids_by_member" not in st.session_state:
     except FileNotFoundError:
         st.session_state["commit_ids_by_member"] = {}
 
-# chave do vendedor atual (ou '__ALL__' se "Todos")
 current_member = sel_member if sel_member != "Todos" else "__ALL__"
 st.session_state["commit_ids_by_member"].setdefault(current_member, [])
 
-# 1) DataFrame base só com os Upside deals abertos (já respeita sel_member)
-commit_disp = df[
-    df["Forecast Indicator"].isin(["Upside", "Upside - Targeted"])
-    & ~df["Stage"].isin(["Closed - Booked", "07 - Execute to Close", "02 - Prospect"])
-][
-    [
-        "Deal Registration ID",
-        "Opportunity",
-        "Sales Team Member",
-        "Stage",
-        "Close Date",
-        "Total New ASV",
-        "Next Steps",
-    ]
-].copy()
+# 1) DataFrame base idêntico ao “Dados Brutos”, mas filtrado a Upside/U-Targeted  
+commit_disp = df.copy()
+commit_disp = commit_disp[
+    commit_disp["Forecast Indicator"].isin(["Upside", "Upside - Targeted"])
+    & ~commit_disp["Stage"].isin(["Closed - Booked", "07 - Execute to Close", "02 - Prospect"])
+]
 
-# 2) marca quais já estavam salvos
+# 2) adiciona coluna booleana “Commit?” marcada se o ID estiver em sessão  
 saved = st.session_state["commit_ids_by_member"][current_member]
-commit_disp["selected"] = commit_disp["Deal Registration ID"].astype(str).isin(saved)
+commit_disp["Commit?"] = commit_disp["Deal Registration ID"].astype(str).isin(saved)
 
-# 3) exibe um data_editor com checkbox na coluna "selected"
+# 3) exibe no data_editor, sem índice, com checkbox na coluna “Commit?”  
 edited = st.data_editor(
     commit_disp,
     column_config={
-        "selected": st.column_config.CheckboxColumn(
-            "Commit?", help="Marque para comprometer este deal"
+        "Commit?": st.column_config.CheckboxColumn(
+            "Commit?", help="Marque para incluir este deal no commit"
         )
     },
     hide_index=True,
     use_container_width=True,
 )
 
-# 4) extrai de volta a lista de IDs selecionados
-new_ids = edited.loc[edited["selected"], "Deal Registration ID"].astype(str).tolist()
-st.session_state["commit_ids_by_member"][current_member] = new_ids
+# 4) lê de volta os IDs marcados e atualiza sessão + disco  
+chosen = edited.loc[edited["Commit?"], "Deal Registration ID"].astype(str).tolist()
+st.session_state["commit_ids_by_member"][current_member] = chosen
 
-# 5) persiste em disco
 with open(SAVE_FILE, "w") as f:
     json.dump(st.session_state["commit_ids_by_member"], f)
 
-# 6) monta o DataFrame final e exibe somatório + tabela estilizada
-commit_df = edited.loc[edited["selected"], commit_disp.columns]
+# 5) monta o DataFrame final selecionado e exibe soma + tabela  
+commit_df = edited.loc[edited["Commit?"], commit_disp.columns]
 total_asv = commit_df["Total New ASV"].sum()
 st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
 
 st.dataframe(
     commit_df.style
-    .format({"Total New ASV": "${:,.2f}"})
-    .set_properties(subset=["Total New ASV"], **{"text-align": "right"}),
-    use_container_width=True,
-)
-
-csv_upside = commit_df.to_csv(index=False).encode("utf-8")
-st.download_button(
-    "⬇️ Download Upside Deals (CSV)",
-    data=csv_upside,
-    file_name="upside_deals.csv",
-    mime="text/csv",
-    key=f"download_upside_{current_member}",
-)
+        .format({"Total New ASV": "${:,.2f}"})
+        .set_properties(subset=["Total New]()_
 
 
 # 16) Dados Brutos e ficha detalhada e ficha detalhada
