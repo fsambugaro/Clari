@@ -4,6 +4,7 @@ import numpy as np
 import plotly.express as px
 import os
 import io
+import json
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
 
 # formata números no estilo US (com vírgulas de milhar e 2 casas decimais)
