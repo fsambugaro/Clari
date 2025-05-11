@@ -340,7 +340,7 @@ for col, title in extras:
 st.markdown("---")
 st.header("✅ Upside deals to reach commit")
 
-# --- 1) inicializa o dicionário por vendedor ---
+# --- inicializa o dicionário por vendedor ---
 if "commit_ids_by_member" not in st.session_state:
     try:
         with open(SAVE_FILE, "r") as f:
@@ -348,17 +348,16 @@ if "commit_ids_by_member" not in st.session_state:
     except FileNotFoundError:
         st.session_state["commit_ids_by_member"] = {}
 
-# chave do vendedor atual (ou '__ALL__' se "Todos")
 current_member = sel_member if sel_member != "Todos" else "__ALL__"
 st.session_state["commit_ids_by_member"].setdefault(current_member, [])
 
-# --- 2) DataFrame base só com os Upside/U-Targeted abertos ---
+# 1) DataFrame base só com os Upside/U-Targeted abertos
 commit_disp = df[
     df["Forecast Indicator"].isin(["Upside", "Upside - Targeted"])
     & ~df["Stage"].isin(["Closed - Booked", "07 - Execute to Close", "02 - Prospect"])
 ].copy()
 
-# --- 3) configura AgGrid com checkbox e pré-seleção por ID ---
+# 2) Configura AgGrid
 gb = GridOptionsBuilder.from_dataframe(commit_disp)
 gb.configure_default_column(cellStyle={"color":"white","backgroundColor":"#000000"})
 gb.configure_column(
@@ -369,19 +368,16 @@ gb.configure_column(
 )
 gb.configure_selection(selection_mode="multiple", use_checkbox=True)
 
-# 3.1) build + getRowNodeId (usa o DRID como chave)
+# 3) Pré-seleção por Deal Registration ID
 grid_opts = gb.build()
 grid_opts["getRowNodeId"] = JsCode(
     "function(data) { return data['Deal Registration ID']; }"
 )
-
-# 3.2) pre_selected_rows: todo registro cuja ID esteja na lista salva
-saved_ids = st.session_state["commit_ids_by_member"][current_member]
+saved = st.session_state["commit_ids_by_member"][current_member]
 grid_opts["pre_selected_rows"] = commit_disp[
-    commit_disp["Deal Registration ID"].astype(str).isin(saved_ids)
+    commit_disp["Deal Registration ID"].astype(str).isin(saved)
 ].to_dict("records")
 
-# 3.3) renderiza o grid
 resp = AgGrid(
     commit_disp,
     gridOptions=grid_opts,
@@ -392,18 +388,21 @@ resp = AgGrid(
     key=f"upside_deals_grid_{current_member}"
 )
 
-# --- 4) captura seleção atual e atualiza sessão + disco ---
-# resp['selected_rows'] já traz os registros completos pré e pós-filtro
-selected = resp["selected_rows"] or []
-# extrai só os IDs
-new_ids = [r["Deal Registration ID"] for r in selected]
+# 4) Extrai a seleção de forma segura
+raw = resp["selected_rows"]
+if isinstance(raw, pd.DataFrame):
+    selected_list = raw.to_dict("records")
+else:
+    selected_list = raw or []
+
+new_ids = [r["Deal Registration ID"] for r in selected_list]
 st.session_state["commit_ids_by_member"][current_member] = new_ids
 
 with open(SAVE_FILE, "w") as f:
     json.dump(st.session_state["commit_ids_by_member"], f)
 
-# --- 5) exibe soma e tabela final estilizada ---
-commit_df = pd.DataFrame(selected, columns=commit_disp.columns)
+# 5) Exibe soma e tabela final
+commit_df = pd.DataFrame(selected_list, columns=commit_disp.columns)
 total_asv = commit_df["Total New ASV"].sum()
 st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
 
