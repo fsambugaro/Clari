@@ -108,7 +108,7 @@ if not file:
     st.info('Selecione um CSV para continuar')
     st.stop()
 
-df = load_data(file
+df = load_data(file)
 
 # carrega a lista de commits já registrados
 if 'commit_ids' not in st.session_state:
