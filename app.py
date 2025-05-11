@@ -353,29 +353,27 @@ for col, title in extras:
 st.markdown('---')
 st.header('✅ Upside deals to reach commit')
 
-# --- inicializa dicionário no session_state ---
+# --- inicializa o dicionário por vendedor ---
 if 'commit_ids_by_member' not in st.session_state:
-    st.session_state['commit_ids_by_member'] = {}
+    # carrega de disco, ou cria vazio
+    try:
+        with open(SAVE_FILE, "r") as f:
+            st.session_state['commit_ids_by_member'] = json.load(f)
+    except FileNotFoundError:
+        st.session_state['commit_ids_by_member'] = {}
 
-# chave atual é o vendedor filtrado
+# define a chave do vendedor atual (ou '__ALL__' se "Todos")
 current_member = sel_member if sel_member != 'Todos' else '__ALL__'
-
-# garante lista inicial para este vendedor
 if current_member not in st.session_state['commit_ids_by_member']:
     st.session_state['commit_ids_by_member'][current_member] = []
 
-# 1) DataFrame base só com os Upside deals ainda abertos (já respeita o filtro de seller)
+# 1) DataFrame base só com os Upside deals abertos (já respeita sel_member)
 commit_disp = df[
     (df.get('Forecast Indicator','').isin(['Upside','Upside - Targeted'])) &
-    (~df['Stage'].isin(['Closed - Booked', '07 - Execute to Close', '02 - Prospect']))
+    (~df['Stage'].isin(['Closed - Booked','07 - Execute to Close','02 - Prospect']))
 ][[
-    'Deal Registration ID',
-    'Opportunity',
-    'Sales Team Member',
-    'Stage',
-    'Close Date',
-    'Total New ASV',
-    'Next Steps'
+    'Deal Registration ID','Opportunity','Sales Team Member',
+    'Stage','Close Date','Total New ASV','Next Steps'
 ]].copy()
 commit_disp['Next Steps'] = commit_disp['Next Steps'].astype(str).str.slice(0,50)
 
@@ -390,7 +388,7 @@ gb.configure_column(
 )
 gb.configure_selection(selection_mode='multiple', use_checkbox=True)
 
-# 3) Pre-seleção: usa apenas IDs salvos para este vendedor
+# 3) Pré-seleção apenas pelos DRIDs salvos para este vendedor
 grid_opts = gb.build()
 grid_opts['getRowNodeId'] = JsCode(
     "function(data) { return data['Deal Registration ID']; }"
@@ -410,31 +408,36 @@ resp = AgGrid(
     key='upside_deals_grid'
 )
 
-# 4) Captura seleção atual e atualiza a lista deste vendedor
+# 4) Captura seleção atual e atualiza o dicionário
 raw = resp['selected_rows']
 sel = raw.to_dict('records') if isinstance(raw, pd.DataFrame) else (raw or [])
 new_ids = [row['Deal Registration ID'] for row in sel]
-
-# sobrescreve a lista para este vendedor
 st.session_state['commit_ids_by_member'][current_member] = new_ids
 
-# 5) Persiste o dicionário completo em disco
+# 5) Persiste em disco
 with open(SAVE_FILE, "w") as f:
     json.dump(st.session_state['commit_ids_by_member'], f)
 
-# 6) Exibe resultados
+# 6) Exibe soma e tabela final
 commit_df = pd.DataFrame(sel, columns=commit_disp.columns)
 total_asv = commit_df['Total New ASV'].sum()
-
 st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
+
 st.dataframe(
     commit_df
-      .style
-      .format({'Total New ASV':'${:,.2f}'})
+      .style.format({'Total New ASV':'${:,.2f}'})
       .set_properties(subset=['Total New ASV'], **{'text-align':'right'}),
     use_container_width=True
 )
 csv_upside = commit_df.to_csv(index=False).encode('utf-8')
+st.download_button(
+    '⬇️ Download Upside Deals (CSV)',
+    data=csv_upside,
+    file_name='upside_deals.csv',
+    mime='text/csv',
+    key='download_upside_deals'
+)
+side = commit_df.to_csv(index=False).encode('utf-8')
 st.download_button(
     '⬇️ Download Upside Deals (CSV)',
     data=csv_upside,
