@@ -396,9 +396,16 @@ resp = AgGrid(
 )
 
 # 6) extrai os selecionados e salva no estado + JSON
-selected = resp["selected_rows"] or []
+raw = resp["selected_rows"]
+if isinstance(raw, pd.DataFrame):
+    selected = raw.to_dict("records")
+else:
+    selected = raw or []
+
 # extrai só os IDs
 new_ids = [row["Deal Registration ID"] for row in selected]
+
+
 st.session_state["commit_ids_by_member"][current_member] = new_ids
 with open(SAVE_FILE, "w") as f:
     json.dump(st.session_state["commit_ids_by_member"], f)
