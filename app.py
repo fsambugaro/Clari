@@ -341,56 +341,56 @@ for col, title in extras:
 st.markdown('---')
 st.header('✅ Upside deals to reach commit')
 
-# --- inicializa o dicionário por vendedor ---
+# --- Inicializa o dicionário por vendedor ---
 if 'commit_ids_by_member' not in st.session_state:
     try:
-        with open(SAVE_FILE, "r") as f:
+        with open(SAVE_FILE, 'r') as f:
             st.session_state['commit_ids_by_member'] = json.load(f)
     except FileNotFoundError:
         st.session_state['commit_ids_by_member'] = {}
 
+# Define o membro atual (ou '__ALL__' para “Todos”)
 current_member = sel_member if sel_member != 'Todos' else '__ALL__'
 if current_member not in st.session_state['commit_ids_by_member']:
     st.session_state['commit_ids_by_member'][current_member] = []
 
-# 1) DataFrame base SEMPRE a partir de master_df
+# 1) DataFrame base a partir do master_df, filtrando Upside(…) E pelo vendedor
 commit_disp = master_df[
-    (master_df.get('Forecast Indicator', '').
-       isin(['Upside', 'Upside - Targeted'])) &
-    (~master_df['Stage'].isin([
-        'Closed - Booked',
-        '07 - Execute to Close',
-        '02 - Prospect'
-    ]))
-][[
+    (master_df.get('Forecast Indicator', '').isin(['Upside', 'Upside - Targeted'])) &
+    (~master_df['Stage'].isin(['Closed - Booked', '07 - Execute to Close', '02 - Prospect']))
+]
+if sel_member != 'Todos':
+    commit_disp = commit_disp[commit_disp['Sales Team Member'] == sel_member]
+commit_disp = commit_disp[[
     'Deal Registration ID', 'Opportunity', 'Sales Team Member',
     'Stage', 'Close Date', 'Total New ASV', 'Next Steps'
 ]].copy()
 commit_disp['Next Steps'] = commit_disp['Next Steps'].astype(str).str.slice(0, 50)
 
-# 2) Configura AgGrid
+# 2) Configura GridOptionsBuilder
 gb = GridOptionsBuilder.from_dataframe(commit_disp)
-gb.configure_default_column(
-    cellStyle={'color':'white','backgroundColor':'#000000'}
-)
+gb.configure_default_column(cellStyle={'color':'white','backgroundColor':'#000'})
 gb.configure_column(
     'Total New ASV',
     type=['numericColumn','numberColumnFilter'],
-    cellStyle={'textAlign':'right','color':'white','backgroundColor':'#000000'},
+    cellStyle={'textAlign':'right','color':'white','backgroundColor':'#000'},
     cellRenderer=us_format
 )
 gb.configure_selection(selection_mode='multiple', use_checkbox=True)
 
-# — AGORA build() e depois editar grid_opts —
+# 3) Build() antes de customizar ids e pré-seleção
 grid_opts = gb.build()
+# usar o DRID como chave única
 grid_opts['getRowNodeId'] = JsCode(
     "function(data) { return data['Deal Registration ID']; }"
 )
+# pré-seleciona TODOS os registros cujo DRID estiver salvo para este membro
+saved_ids = st.session_state['commit_ids_by_member'][current_member]
 grid_opts['pre_selected_rows'] = commit_disp[
-    commit_disp['Deal Registration ID'].
-      isin(st.session_state['commit_ids_by_member'][current_member])
+    commit_disp['Deal Registration ID'].isin(saved_ids)
 ].to_dict('records')
 
+# 4) Exibe o AgGrid
 resp = AgGrid(
     commit_disp,
     gridOptions=grid_opts,
@@ -401,19 +401,15 @@ resp = AgGrid(
     key=f"upside_deals_grid_{current_member}"
 )
 
-# 3) Extrai IDs selecionados
+# 5) Extrai os DRIDs selecionados e atualiza o estado
 raw = resp['selected_rows']
-selected_list = (
-    raw.to_dict('records') if isinstance(raw, pd.DataFrame) else (raw or [])
-)
+selected_list = raw.to_dict('records') if isinstance(raw, pd.DataFrame) else (raw or [])
 new_ids = [row['Deal Registration ID'] for row in selected_list]
-
-# 4) Atualiza e persiste para este vendedor
 st.session_state['commit_ids_by_member'][current_member] = new_ids
-with open(SAVE_FILE, "w") as f:
+with open(SAVE_FILE, 'w') as f:
     json.dump(st.session_state['commit_ids_by_member'], f)
 
-# 5) Exibe soma e tabela final
+# 6) Mostra soma e tabela final
 commit_df = pd.DataFrame(selected_list, columns=commit_disp.columns)
 total_asv = commit_df['Total New ASV'].sum()
 st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
