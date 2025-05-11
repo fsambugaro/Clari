@@ -380,16 +380,17 @@ gb.configure_selection(selection_mode='multiple', use_checkbox=True)
 
 # 3) Pre-seleção pelo Deal Registration ID
 grid_opts = gb.build()
-# 1) faz o AgGrid usar o Deal Registration ID como chave de linha
+
+# - informa ao AgGrid para usar o DRID como chave única de linha
 grid_opts['getRowNodeId'] = JsCode(
     "function(data) { return data['Deal Registration ID']; }"
 )
 
-# 2) pré-seleciona os DADOS (linhas) cujos IDs estão guardados
-pre_rows = commit_disp[
-    commit_disp['Deal Registration ID'].isin(st.session_state.get('commit_ids', []))
-].to_dict('records')
-grid_opts['pre_selected_rows'] = pre_rows
+# - passa apenas a lista de DRIDs para pré-seleção
+grid_opts['pre_selected_rows'] = [
+    drid for drid in st.session_state.get('commit_ids', [])
+    if drid in commit_disp['Deal Registration ID'].astype(str).tolist()
+]
 
 resp = AgGrid(
     commit_disp,
