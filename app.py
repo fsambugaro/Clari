@@ -382,10 +382,12 @@ grid_opts = gb.build()
 grid_opts['getRowNodeId'] = JsCode(
     "function(data) { return data['Deal Registration ID']; }"
 )
-grid_opts['pre_selected_rows'] = [
-    drid for drid in st.session_state['commit_ids_by_member'][current_member]
-    if drid in commit_disp['Deal Registration ID'].astype(str).tolist()
-]
+# >> em vez de passar só os IDs, passe o registro inteiro << 
+grid_opts['pre_selected_rows'] = commit_disp[
+    commit_disp['Deal Registration ID']
+      .isin(st.session_state['commit_ids_by_member'][current_member])
+].to_dict('records')
+
 
 resp = AgGrid(
     commit_disp,
