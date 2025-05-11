@@ -348,7 +348,7 @@ if "commit_ids_by_member" not in st.session_state:
     except FileNotFoundError:
         st.session_state["commit_ids_by_member"] = {}
 
-# identifica o vendedor atual (ou __ALL__ se "Todos")
+# define a chave do vendedor atual (ou '__ALL__' se "Todos")
 current_member = sel_member if sel_member != "Todos" else "__ALL__"
 st.session_state["commit_ids_by_member"].setdefault(current_member, [])
 
@@ -361,28 +361,22 @@ commit_disp = df[
 # 2) Configura AgGrid com checkbox
 gb = GridOptionsBuilder.from_dataframe(commit_disp)
 gb.configure_default_column(cellStyle={"color":"white","backgroundColor":"#000000"})
-# formatter para ASV
 gb.configure_column(
     "Total New ASV",
     type=["numericColumn","numberColumnFilter"],
     cellStyle={"textAlign":"right","color":"white","backgroundColor":"#000000"},
     cellRenderer=us_format
 )
-# habilita seleção múltipla
 gb.configure_selection("multiple", use_checkbox=True)
 grid_opts = gb.build()
 
-# 3) faz AgGrid usar o DRID como chave única de linha
+# 3) faz o AgGrid usar o Deal Registration ID como chave única
 grid_opts["getRowNodeId"] = JsCode(
     "function(data) { return data['Deal Registration ID']; }"
 )
-# 4) pré-seleciona os registros que estão no estado para este vendedor
-pre = commit_disp[
-    commit_disp["Deal Registration ID"].isin(
-        st.session_state["commit_ids_by_member"][current_member]
-    )
-].to_dict("records")
-grid_opts["pre_selected_rows"] = pre
+
+# 4) pré-seleciona apenas a lista de IDs (strings), nunca dicts inteiros
+grid_opts["pre_selected_rows"] = st.session_state["commit_ids_by_member"][current_member]
 
 # 5) exibe o grid
 resp = AgGrid(
@@ -395,17 +389,14 @@ resp = AgGrid(
     key=f"commit_grid_{current_member}"
 )
 
-# 6) extrai os selecionados e salva no estado + JSON
+# 6) extrai os selecionados (tratando DataFrame ou lista) e salva no estado + JSON
 raw = resp["selected_rows"]
 if isinstance(raw, pd.DataFrame):
     selected = raw.to_dict("records")
 else:
     selected = raw or []
 
-# extrai só os IDs
 new_ids = [row["Deal Registration ID"] for row in selected]
-
-
 st.session_state["commit_ids_by_member"][current_member] = new_ids
 with open(SAVE_FILE, "w") as f:
     json.dump(st.session_state["commit_ids_by_member"], f)
@@ -423,9 +414,6 @@ gb2.configure_column(
     cellStyle={"textAlign":"right","color":"white","backgroundColor":"#000000"},
     cellRenderer=us_format
 )
-# opcional: permitir nova seleção nessa tabela final
-gb2.configure_selection("multiple", use_checkbox=True)
-
 AgGrid(
     commit_df,
     gridOptions=gb2.build(),
@@ -435,7 +423,6 @@ AgGrid(
     height=300,
     key=f"commit_selected_{current_member}"
 )
-
 
 
 # 16) Dados Brutos e ficha detalhada e ficha detalhada
