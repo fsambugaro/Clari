@@ -365,20 +365,26 @@ commit_disp = df[
     'Total New ASV',
     'Next Steps'
 ]].copy()
-
-
 commit_disp['Next Steps'] = commit_disp['Next Steps'].astype(str).str.slice(0,50)
 
-grid_opts = gb.build()
+# 2) Configura AgGrid
+gb = GridOptionsBuilder.from_dataframe(commit_disp)
+gb.configure_default_column(cellStyle={'color':'white','backgroundColor':'#000000'})
+gb.configure_column(
+    'Total New ASV',
+    type=['numericColumn','numberColumnFilter'],
+    cellStyle={'textAlign':'right','color':'white','backgroundColor':'#000000'},
+    cellRenderer=us_format
+)
+gb.configure_selection(selection_mode='multiple', use_checkbox=True)
 
-# 1) Usa o Deal Registration ID como chave de linha
+# 3) Pre-seleção pelo Deal Registration ID
+grid_opts = gb.build()
 grid_opts['getRowNodeId'] = JsCode(
     "function(data) { return data['Deal Registration ID']; }"
 )
-
-# 2) Pré-seleciona apenas os DRIDs válidos para o vendedor atual
 grid_opts['pre_selected_rows'] = [
-    drid for drid in st.session_state['commit_ids']
+    drid for drid in st.session_state.get('commit_ids', [])
     if drid in commit_disp['Deal Registration ID'].tolist()
 ]
 
@@ -392,34 +398,23 @@ resp = AgGrid(
     key='upside_deals_grid'
 )
 
-
-
-# 3) Monta o DataFrame dos selecionados
+# 4) Monta o DataFrame dos selecionados
 raw = resp['selected_rows']
-if isinstance(raw, pd.DataFrame):
-    sel = raw.to_dict('records')
-else:
-    sel = raw or []
-
+sel = raw.to_dict('records') if isinstance(raw, pd.DataFrame) else (raw or [])
 commit_df = pd.DataFrame(sel, columns=commit_disp.columns)
 
-# 3.1) Atualiza a lista persistida de commit_ids
+# 5) Atualiza e persiste commit_ids
 for row in sel:
     drid = row['Deal Registration ID']
     if drid not in st.session_state['commit_ids']:
         st.session_state['commit_ids'].append(drid)
-
-# 3.2) Persiste a lista em disco
 with open(SAVE_FILE, "w") as f:
     json.dump(st.session_state['commit_ids'], f)
 
-# 4) Soma de Total New ASV
+# 6) Soma de Total New ASV e exibição
 total_asv = commit_df['Total New ASV'].sum()
-
-# 5) Título com soma dinâmica
 st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
 
-# 6) Exibe tabela estilizada e botão de download
 st.dataframe(
     commit_df
       .style
@@ -435,6 +430,7 @@ st.download_button(
     mime='text/csv',
     key='download_upside_deals'
 )
+
 
 
 # 16) Dados Brutos e ficha detalhada e ficha detalhada
