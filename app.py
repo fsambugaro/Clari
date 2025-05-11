@@ -385,30 +385,15 @@ commit_df = edited.loc[edited["Commit?"], commit_disp.columns.drop("Commit?")]
 total_asv = commit_df["Total New ASV"].sum()
 st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
 
-# 6) Exibe o grid de seleção final (só para visualização)
-gb2 = GridOptionsBuilder.from_dataframe(commit_df)
-gb2.configure_default_column(cellStyle={"color":"white","backgroundColor":"#000000"})
-gb2.configure_column(
-    "Total New ASV",
-    type=["numericColumn","numberColumnFilter"],
-    cellStyle={"textAlign":"right","color":"white","backgroundColor":"#000000"},
-    cellRenderer=JsCode(
-        "function(params){"
-        "  return params.value!=null"
-        "    ? params.value.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})"
-        "    : '';"
-        "}"
-    )
+# 6) Exibe tabela final selecionada e botão de download (sem AgGrid)
+styled = (
+    commit_df
+      .style
+      .format({'Total New ASV':'${:,.2f}'})
+      .set_properties(subset=['Total New ASV'], **{'text-align':'right'})
 )
-grid2 = AgGrid(
-    commit_df,
-    gridOptions=gb2.build(),
-    theme="streamlit-dark",
-    fit_columns_on_grid_load=True,
-    height=300
-)
+st.dataframe(styled, use_container_width=True)
 
-# 7) Botão de download
 csv_upside = commit_df.to_csv(index=False).encode("utf-8")
 st.download_button(
     "⬇️ Download Upside Deals (CSV)",
