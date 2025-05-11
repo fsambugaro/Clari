@@ -369,24 +369,18 @@ commit_disp = df[
 
 commit_disp['Next Steps'] = commit_disp['Next Steps'].astype(str).str.slice(0,50)
 
-# 2) Exibe AgGrid para selecionar múltiplos Upside deals, com pré-seleção
-gb = GridOptionsBuilder.from_dataframe(commit_disp)
-gb.configure_default_column(cellStyle={'color':'white','backgroundColor':'#000000'})
-gb.configure_column(
-    'Total New ASV',
-    type=['numericColumn','numberColumnFilter'],
-    cellStyle={'textAlign':'right','color':'white','backgroundColor':'#000000'},
-    cellRenderer=us_format
-)
-gb.configure_selection(selection_mode='multiple', use_checkbox=True)
-
-# determina quais índices devem vir pré-selecionados
-pre_sel = commit_disp.index[
-    commit_disp['Deal Registration ID'].isin(st.session_state['commit_ids'])
-].tolist()
-
 grid_opts = gb.build()
-grid_opts['pre_selected_rows'] = pre_sel
+
+# 1) Usa o Deal Registration ID como chave de linha
+grid_opts['getRowNodeId'] = JsCode(
+    "function(data) { return data['Deal Registration ID']; }"
+)
+
+# 2) Pré-seleciona apenas os DRIDs válidos para o vendedor atual
+grid_opts['pre_selected_rows'] = [
+    drid for drid in st.session_state['commit_ids']
+    if drid in commit_disp['Deal Registration ID'].tolist()
+]
 
 resp = AgGrid(
     commit_disp,
@@ -397,6 +391,7 @@ resp = AgGrid(
     height=300,
     key='upside_deals_grid'
 )
+
 
 
 # 3) Monta o DataFrame dos selecionados
