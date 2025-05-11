@@ -336,11 +336,11 @@ for col, title in extras:
         download_html(fig, title.replace(' ', '_').lower())
 
 
-# 15) Seleção e exibição de Committed Deals por vendedor (igual ao raw + checkbox)
+# 15) Seleção e exibição de Committed Deals por vendedor
 st.markdown("---")
 st.header("✅ Upside deals to reach commit")
 
-# inicializa o dicionário por vendedor
+# --- inicializa o dicionário por vendedor ---
 if "commit_ids_by_member" not in st.session_state:
     try:
         with open(SAVE_FILE, "r") as f:
@@ -348,76 +348,86 @@ if "commit_ids_by_member" not in st.session_state:
     except FileNotFoundError:
         st.session_state["commit_ids_by_member"] = {}
 
-# determina o vendedor atual (ou __ALL__ se Todos)
+# identifica o vendedor atual (ou __ALL__ se "Todos")
 current_member = sel_member if sel_member != "Todos" else "__ALL__"
 st.session_state["commit_ids_by_member"].setdefault(current_member, [])
 
-# 1) DataFrame base idêntico ao “Dados Brutos”, mas só Upside/U-Targeted
+# 1) DataFrame base só com Upside/U-Targeted abertos
 commit_disp = df[
     df["Forecast Indicator"].isin(["Upside", "Upside - Targeted"])
     & ~df["Stage"].isin(["Closed - Booked", "07 - Execute to Close", "02 - Prospect"])
 ].copy()
 
-# 2) coluna “Commit?” pré-marcada conforme o que já está salvo
-saved = st.session_state["commit_ids_by_member"][current_member]
-commit_disp["Commit?"] = commit_disp["Deal Registration ID"].astype(str).isin(saved)
-
-# 3) mostra editor com checkbox na coluna “Commit?”
-edited = st.data_editor(
-    commit_disp,
-    column_config={
-        "Commit?": st.column_config.CheckboxColumn(
-            "Commit?", help="Marque para incluir este deal no commit"
-        )
-    },
-    hide_index=True,
-    use_container_width=True,
-)
-
-# 4) atualiza sessão + salva em disco os IDs marcados
-chosen = (
-    edited.loc[edited["Commit?"], "Deal Registration ID"]
-    .astype(str)
-    .tolist()
-)
-st.session_state["commit_ids_by_member"][current_member] = chosen
-with open(SAVE_FILE, "w") as f:
-    json.dump(st.session_state["commit_ids_by_member"], f)
-
-# 5) monta o DataFrame final só com os selecionados e exibe soma + tabela
-commit_df = edited.loc[edited["Commit?"], commit_disp.columns]
-total_asv = commit_df["Total New ASV"].sum()
-st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
-
-# estiliza e exibe via AgGrid
-gb2 = GridOptionsBuilder.from_dataframe(commit_df)
-gb2.configure_default_column(
-    cellStyle={"color": "white", "backgroundColor": "#000000"}
-)
-gb2.configure_column(
+# 2) Configura AgGrid com checkbox
+gb = GridOptionsBuilder.from_dataframe(commit_disp)
+gb.configure_default_column(cellStyle={"color":"white","backgroundColor":"#000000"})
+# formatter para ASV
+gb.configure_column(
     "Total New ASV",
-    type=["numericColumn", "numberColumnFilter"],
-    cellStyle={"textAlign": "right", "color": "white", "backgroundColor": "#000000"},
-    cellRenderer=JsCode(
-        "function(params){"
-        "  return params.value!=null"
-        "    ? params.value.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})"
-        "    : '';"
-        "}"
-    ),
+    type=["numericColumn","numberColumnFilter"],
+    cellStyle={"textAlign":"right","color":"white","backgroundColor":"#000000"},
+    cellRenderer=us_format
 )
-gb2.configure_selection("multiple", use_checkbox=True)
+# habilita seleção múltipla
+gb.configure_selection("multiple", use_checkbox=True)
+grid_opts = gb.build()
 
-_ = AgGrid(
-    commit_df,
-    gridOptions=gb2.build(),
+# 3) faz AgGrid usar o DRID como chave única de linha
+grid_opts["getRowNodeId"] = JsCode(
+    "function(data) { return data['Deal Registration ID']; }"
+)
+# 4) pré-seleciona os registros que estão no estado para este vendedor
+pre = commit_disp[
+    commit_disp["Deal Registration ID"].isin(
+        st.session_state["commit_ids_by_member"][current_member]
+    )
+].to_dict("records")
+grid_opts["pre_selected_rows"] = pre
+
+# 5) exibe o grid
+resp = AgGrid(
+    commit_disp,
+    gridOptions=grid_opts,
     theme="streamlit-dark",
     update_mode=GridUpdateMode.SELECTION_CHANGED,
     allow_unsafe_jscode=True,
-    height=300,
-    key=f"commit_selected_grid_{current_member}",
+    height=350,
+    key=f"commit_grid_{current_member}"
 )
 
+# 6) extrai os selecionados e salva no estado + JSON
+selected = resp["selected_rows"] or []
+# extrai só os IDs
+new_ids = [row["Deal Registration ID"] for row in selected]
+st.session_state["commit_ids_by_member"][current_member] = new_ids
+with open(SAVE_FILE, "w") as f:
+    json.dump(st.session_state["commit_ids_by_member"], f)
+
+# 7) monta DataFrame final e exibe soma + tabela
+commit_df = pd.DataFrame(selected, columns=commit_disp.columns)
+total_asv = commit_df["Total New ASV"].sum()
+st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
+
+gb2 = GridOptionsBuilder.from_dataframe(commit_df)
+gb2.configure_default_column(cellStyle={"color":"white","backgroundColor":"#000000"})
+gb2.configure_column(
+    "Total New ASV",
+    type=["numericColumn","numberColumnFilter"],
+    cellStyle={"textAlign":"right","color":"white","backgroundColor":"#000000"},
+    cellRenderer=us_format
+)
+# opcional: permitir nova seleção nessa tabela final
+gb2.configure_selection("multiple", use_checkbox=True)
+
+AgGrid(
+    commit_df,
+    gridOptions=gb2.build(),
+    theme="streamlit-dark",
+    update_mode=GridUpdateMode.NO_UPDATE,
+    allow_unsafe_jscode=True,
+    height=300,
+    key=f"commit_selected_{current_member}"
+)
 
 
 
