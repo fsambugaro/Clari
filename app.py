@@ -119,16 +119,6 @@ if 'commit_ids_by_member' not in st.session_state:
     except FileNotFoundError:
         st.session_state['commit_ids_by_member'] = {}
 
-# remove quem deixou de ser Upside (passou a Forecast)
-valid_ids = [
-    drid for drid in st.session_state['commit_ids']
-    if not (
-        (df['Deal Registration ID'] == drid) &
-        (df['Forecast Indicator'] == 'Forecast')
-    ).any()
-]
-st.session_state['commit_ids'] = valid_ids
-
 
 # 7) Filtros básicos
 st.sidebar.header('🔍 Filtros')
