@@ -111,6 +111,8 @@ if not file:
 
 df = load_data(file)
 
+master_df = df.copy()  # <-- este nunca mais deve sofrer filtro de sidebar
+
 # carrega o dicionário de commit_ids por vendedor
 if 'commit_ids_by_member' not in st.session_state:
     try:
@@ -357,13 +359,14 @@ if current_member not in st.session_state['commit_ids_by_member']:
     st.session_state['commit_ids_by_member'][current_member] = []
 
 # 1) DataFrame base só com os Upside deals abertos (já respeita sel_member)
-commit_disp = df[
-    (df.get('Forecast Indicator','').isin(['Upside','Upside - Targeted'])) &
-    (~df['Stage'].isin(['Closed - Booked','07 - Execute to Close','02 - Prospect']))
+commit_disp = master_df[
+    (master_df.get('Forecast Indicator','').isin(['Upside','Upside - Targeted'])) &
+    (~master_df['Stage'].isin(['Closed - Booked','07 - Execute to Close','02 - Prospect']))
 ][[
     'Deal Registration ID','Opportunity','Sales Team Member',
     'Stage','Close Date','Total New ASV','Next Steps'
 ]].copy()
+
 
 # formata Next Steps e converte Close Date para string (YYYY-MM-DD)
 commit_disp['Next Steps'] = commit_disp['Next Steps'].astype(str).str.slice(0,50)
