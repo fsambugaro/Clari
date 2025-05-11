@@ -327,14 +327,10 @@ for col, title in extras:
 
 # 15) Seleção e exibição de Committed Deals
 st.markdown('---')
-st.header('✅ Seleção de Committed Deals')
+st.header('✅ Upside deals to reach commit')
 
-# 1) Inicializa seleção persistente
-if 'commit_ids' not in st.session_state:
-    st.session_state['commit_ids'] = []
-
-# 2) DataFrame base com as colunas de interesse
-commit_disp = df[[
+# 1) DataFrame base só com os Upside deals
+commit_disp = df[df.get('Forecast Indicator','') == 'Upside'][[
     'Deal Registration ID',
     'Opportunity',
     'Sales Team Member',
@@ -343,61 +339,58 @@ commit_disp = df[[
     'Total New ASV',
     'Next Steps'
 ]].copy()
-commit_disp['Next Steps'] = commit_disp['Next Steps'].astype(str).str.slice(0, 50)
+commit_disp['Next Steps'] = commit_disp['Next Steps'].astype(str).str.slice(0,50)
 
-# 3) Exibe AgGrid para adicionar novos IDs
-commit_gb = GridOptionsBuilder.from_dataframe(commit_disp)
-commit_gb.configure_default_column(cellStyle={'color':'white','backgroundColor':'#000000'})
-commit_gb.configure_column(
+# 2) Exibe AgGrid para selecionar múltiplos Upside deals
+gb = GridOptionsBuilder.from_dataframe(commit_disp)
+gb.configure_default_column(cellStyle={'color':'white','backgroundColor':'#000000'})
+gb.configure_column(
     'Total New ASV',
     type=['numericColumn','numberColumnFilter'],
     cellStyle={'textAlign':'right','color':'white','backgroundColor':'#000000'},
     cellRenderer=us_format
 )
-commit_gb.configure_selection(selection_mode='multiple', use_checkbox=True)
+gb.configure_selection(selection_mode='multiple', use_checkbox=True)
 resp = AgGrid(
     commit_disp,
-    gridOptions=commit_gb.build(),
+    gridOptions=gb.build(),
     theme='streamlit-dark',
     update_mode=GridUpdateMode.SELECTION_CHANGED,
     allow_unsafe_jscode=True,
     height=300,
-    key='commit_deals_grid'
+    key='upside_deals_grid'
 )
 
-# 4) Atualiza sessão com novos selecionados
-raw_sel = resp['selected_rows']
-if isinstance(raw_sel, pd.DataFrame):
-    sel_list = raw_sel.to_dict('records')
+# 3) Monta o DataFrame dos selecionados
+raw = resp['selected_rows']
+if isinstance(raw, pd.DataFrame):
+    sel = raw.to_dict('records')
 else:
-    sel_list = raw_sel or []
-for row in sel_list:
-    drid = row['Deal Registration ID']
-    if drid not in st.session_state['commit_ids']:
-        st.session_state['commit_ids'].append(drid)
+    sel = raw or []
 
-# 5) Reconstrói commit_df a partir dos IDs na sessão
-commit_df = commit_disp[
-    commit_disp['Deal Registration ID'].isin(st.session_state['commit_ids'])
-]
+commit_df = pd.DataFrame(sel, columns=commit_disp.columns)
 
-# 6) Exibe Committed Deals e botão de download
-st.subheader('📋 Committed Deals')
-styled = (
+# 4) Soma de Total New ASV
+total_asv = commit_df['Total New ASV'].sum()
+
+# 5) Título com soma dinâmica
+st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
+
+# 6) Exibe tabela estilizada e botão de download
+st.dataframe(
     commit_df
-    .style
-    .format({'Total New ASV': '${:,.2f}'})
-    .set_properties(subset=['Total New ASV'], **{'text-align': 'right'})
+      .style
+      .format({'Total New ASV':'${:,.2f}'})
+      .set_properties(subset=['Total New ASV'], **{'text-align':'right'}),
+    use_container_width=True
 )
-st.dataframe(styled, use_container_width=True)
-
-csv_commit = commit_df.to_csv(index=False).encode('utf-8')
+csv_upside = commit_df.to_csv(index=False).encode('utf-8')
 st.download_button(
-    '⬇️ Download Committed Deals (CSV)',
-    data=csv_commit,
-    file_name='committed_deals.csv',
+    '⬇️ Download Upside Deals (CSV)',
+    data=csv_upside,
+    file_name='upside_deals.csv',
     mime='text/csv',
-    key='download_committed_deals'
+    key='download_upside_deals'
 )
 
 
