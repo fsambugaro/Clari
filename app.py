@@ -111,7 +111,9 @@ if not file:
 
 df = load_data(file)
 
-master_df = df.copy()  # <-- este nunca mais deve sofrer filtro de sidebar
+# ——— Cópia imune aos filtros da sidebar ———
+master_df = df.copy()
+
 
 # carrega o dicionário de commit_ids por vendedor
 if 'commit_ids_by_member' not in st.session_state:
@@ -353,24 +355,34 @@ if 'commit_ids_by_member' not in st.session_state:
     except FileNotFoundError:
         st.session_state['commit_ids_by_member'] = {}
 
+# chave do vendedor atual (ou '__ALL__' se "Todos")
 current_member = sel_member if sel_member != 'Todos' else '__ALL__'
 if current_member not in st.session_state['commit_ids_by_member']:
     st.session_state['commit_ids_by_member'][current_member] = []
 
-# 1) DataFrame base SEMPRE do master_df, sem filtros de sidebar
+# 1) DataFrame base SEMPRE a partir de master_df
 commit_disp = master_df[
-    (master_df.get('Forecast Indicator','').isin(['Upside','Upside - Targeted'])) &
-    (~master_df['Stage'].isin(['Closed - Booked','07 - Execute to Close','02 - Prospect']))
+    (master_df.get('Forecast Indicator', '').
+       isin(['Upside', 'Upside - Targeted'])) &
+    (~master_df['Stage'].isin([
+        'Closed - Booked',
+        '07 - Execute to Close',
+        '02 - Prospect'
+    ]))
 ][[
-    'Deal Registration ID','Opportunity','Sales Team Member',
-    'Stage','Close Date','Total New ASV','Next Steps'
+    'Deal Registration ID', 'Opportunity', 'Sales Team Member',
+    'Stage', 'Close Date', 'Total New ASV', 'Next Steps'
 ]].copy()
-commit_disp['Next Steps'] = commit_disp['Next Steps'].astype(str).str.slice(0,50)
-commit_disp['Close Date'] = commit_disp['Close Date'].dt.strftime('%Y-%m-%d')
 
-# 2) Configura AgGrid
+# garantir mesma formatação de tipos
+commit_disp['Next Steps'] = commit_disp['Next Steps'].astype(str).str.slice(0, 50)
+commit_disp['Close Date'] = pd.to_datetime(commit_disp['Close Date'], errors='coerce')
+
+# 2) Configura o AgGrid
 gb = GridOptionsBuilder.from_dataframe(commit_disp)
-gb.configure_default_column(cellStyle={'color':'white','backgroundColor':'#000000'})
+gb.configure_default_column(
+    cellStyle={'color':'white','backgroundColor':'#000000'}
+)
 gb.configure_column(
     'Total New ASV',
     type=['numericColumn','numberColumnFilter'],
@@ -379,14 +391,15 @@ gb.configure_column(
 )
 gb.configure_selection(selection_mode='multiple', use_checkbox=True)
 
-# 3) Pré-seleção pelos registros inteiros
+# 3) Pré-seleção pelo Deal Registration ID (independente de posição)
 grid_opts = gb.build()
 grid_opts['getRowNodeId'] = JsCode(
     "function(data) { return data['Deal Registration ID']; }"
 )
+# pega os registros completos que devem vir pré-selecionados
 grid_opts['pre_selected_rows'] = commit_disp[
-    commit_disp['Deal Registration ID']
-      .isin(st.session_state['commit_ids_by_member'][current_member])
+    commit_disp['Deal Registration ID'].
+      isin(st.session_state['commit_ids_by_member'][current_member])
 ].to_dict('records')
 
 resp = AgGrid(
@@ -399,23 +412,27 @@ resp = AgGrid(
     key=f"upside_deals_grid_{current_member}"
 )
 
-# 4) Extrai os IDs e atualiza & persiste
+# 4) Extrai IDs selecionados
 raw = resp['selected_rows']
-selected_list = raw.to_dict('records') if isinstance(raw, pd.DataFrame) else (raw or [])
+selected_list = (
+    raw.to_dict('records') if isinstance(raw, pd.DataFrame) else (raw or [])
+)
 new_ids = [row['Deal Registration ID'] for row in selected_list]
 
+# 5) Atualiza e persiste para este vendedor
 st.session_state['commit_ids_by_member'][current_member] = new_ids
 with open(SAVE_FILE, "w") as f:
     json.dump(st.session_state['commit_ids_by_member'], f)
 
-# 5) Exibe soma e tabela
+# 6) Exibe soma e tabela final
 commit_df = pd.DataFrame(selected_list, columns=commit_disp.columns)
 total_asv = commit_df['Total New ASV'].sum()
 st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
 
 st.dataframe(
     commit_df
-      .style.format({'Total New ASV':'${:,.2f}'})
+      .style
+      .format({'Total New ASV':'${:,.2f}'})
       .set_properties(subset=['Total New ASV'], **{'text-align':'right'}),
     use_container_width=True
 )
