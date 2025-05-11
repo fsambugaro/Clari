@@ -369,7 +369,7 @@ commit_disp = df[
 
 commit_disp['Next Steps'] = commit_disp['Next Steps'].astype(str).str.slice(0,50)
 
-# 2) Exibe AgGrid para selecionar múltiplos Upside deals
+# 2) Exibe AgGrid para selecionar múltiplos Upside deals, com pré-seleção
 gb = GridOptionsBuilder.from_dataframe(commit_disp)
 gb.configure_default_column(cellStyle={'color':'white','backgroundColor':'#000000'})
 gb.configure_column(
@@ -379,15 +379,25 @@ gb.configure_column(
     cellRenderer=us_format
 )
 gb.configure_selection(selection_mode='multiple', use_checkbox=True)
+
+# determina quais índices devem vir pré-selecionados
+pre_sel = commit_disp.index[
+    commit_disp['Deal Registration ID'].isin(st.session_state['commit_ids'])
+].tolist()
+
+grid_opts = gb.build()
+grid_opts['pre_selected_rows'] = pre_sel
+
 resp = AgGrid(
     commit_disp,
-    gridOptions=gb.build(),
+    gridOptions=grid_opts,
     theme='streamlit-dark',
     update_mode=GridUpdateMode.SELECTION_CHANGED,
     allow_unsafe_jscode=True,
     height=300,
     key='upside_deals_grid'
 )
+
 
 # 3) Monta o DataFrame dos selecionados
 raw = resp['selected_rows']
