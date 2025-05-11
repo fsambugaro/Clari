@@ -345,7 +345,6 @@ st.header('✅ Upside deals to reach commit')
 
 # --- inicializa o dicionário por vendedor ---
 if 'commit_ids_by_member' not in st.session_state:
-    # carrega de disco, ou cria vazio
     try:
         with open(SAVE_FILE, "r") as f:
             st.session_state['commit_ids_by_member'] = json.load(f)
@@ -401,8 +400,9 @@ resp = AgGrid(
 # 4) Captura seleção atual e atualiza o dicionário
 raw = resp['selected_rows']
 sel = raw.to_dict('records') if isinstance(raw, pd.DataFrame) else (raw or [])
-new_ids = [row['Deal Registration ID'] for row in sel]
-st.session_state['commit_ids_by_member'][current_member] = new_ids
+st.session_state['commit_ids_by_member'][current_member] = [
+    row['Deal Registration ID'] for row in sel
+]
 
 # 5) Persiste em disco
 with open(SAVE_FILE, "w") as f:
@@ -419,15 +419,8 @@ st.dataframe(
       .set_properties(subset=['Total New ASV'], **{'text-align':'right'}),
     use_container_width=True
 )
+
 csv_upside = commit_df.to_csv(index=False).encode('utf-8')
-st.download_button(
-    '⬇️ Download Upside Deals (CSV)',
-    data=csv_upside,
-    file_name='upside_deals.csv',
-    mime='text/csv',
-    key='download_upside_deals'
-)
-side = commit_df.to_csv(index=False).encode('utf-8')
 st.download_button(
     '⬇️ Download Upside Deals (CSV)',
     data=csv_upside,
