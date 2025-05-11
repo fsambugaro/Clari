@@ -394,7 +394,7 @@ resp = AgGrid(
     update_mode=GridUpdateMode.SELECTION_CHANGED,
     allow_unsafe_jscode=True,
     height=300,
-    key='upside_deals_grid'
+    key=f"upside_deals_grid_{current_member}'
 )
 
 # 4) Extrai os Deal Registration IDs direto da lista retornada
@@ -434,7 +434,7 @@ st.download_button(
     data=csv_upside,
     file_name='upside_deals.csv',
     mime='text/csv',
-    key='download_upside_deals'
+    key=f"download_upside_deals_{current_member}'
 )
 
 
