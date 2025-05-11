@@ -354,7 +354,7 @@ st.header('✅ Upside deals to reach commit')
 
 # 1) DataFrame base só com os Upside deals ainda abertos
 commit_disp = df[
-    (df.get('Forecast Indicator','').isin(['Upside','Upside target'])) &
+    (df.get('Forecast Indicator','') == 'Upside') &
     (~df['Stage'].isin(['Closed - Booked', '07 - Execute to Close', '02 - Prospect']))
 ][[
     'Deal Registration ID',
@@ -365,7 +365,6 @@ commit_disp = df[
     'Total New ASV',
     'Next Steps'
 ]].copy()
-
 
 commit_disp['Next Steps'] = commit_disp['Next Steps'].astype(str).str.slice(0,50)
 
