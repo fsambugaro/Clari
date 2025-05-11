@@ -389,7 +389,10 @@ st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}
 st.dataframe(
     commit_df.style
         .format({"Total New ASV": "${:,.2f}"})
-        .set_properties(subset=["Total New]()_
+        .set_properties(subset=["Total New ASV"], **{"text-align": "right"}),
+    use_container_width=True,
+)
+
 
 
 # 16) Dados Brutos e ficha detalhada e ficha detalhada
