@@ -111,13 +111,14 @@ if not file:
 
 df = load_data(file)
 
-# carrega a lista de commits já registrados
-if 'commit_ids' not in st.session_state:
+# carrega o dicionário de commit_ids por vendedor
+if 'commit_ids_by_member' not in st.session_state:
     try:
         with open(SAVE_FILE, "r") as f:
-            st.session_state['commit_ids'] = json.load(f)
+            st.session_state['commit_ids_by_member'] = json.load(f)
     except FileNotFoundError:
-        st.session_state['commit_ids'] = []
+        st.session_state['commit_ids_by_member'] = {}
+
 # remove quem deixou de ser Upside (passou a Forecast)
 valid_ids = [
     drid for drid in st.session_state['commit_ids']
