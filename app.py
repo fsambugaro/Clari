@@ -386,12 +386,45 @@ commit_df = edited.loc[edited["Commit?"], commit_disp.columns]
 total_asv = commit_df["Total New ASV"].sum()
 st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
 
-st.dataframe(
-    commit_df.style
-        .format({"Total New ASV": "${:,.2f}"})
-        .set_properties(subset=["Total New ASV"], **{"text-align": "right"}),
-    use_container_width=True,
+# 1) Monta o gridOptions para o commit_df
+gb2 = GridOptionsBuilder.from_dataframe(commit_df)
+gb2.configure_default_column(
+    cellStyle={'color':'white','backgroundColor':'#000000'}
 )
+gb2.configure_column(
+    'Total New ASV',
+    type=['numericColumn','numberColumnFilter'],
+    cellStyle={'textAlign':'right','color':'white','backgroundColor':'#000000'},
+    cellRenderer=JsCode(
+        "function(params){"
+        "  return params.value!=null"
+        "    ? params.value.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})"
+        "    : '';"
+        "}"
+    )
+)
+gb2.configure_selection('multiple', use_checkbox=True)
+
+grid2 = AgGrid(
+    commit_df,
+    gridOptions=gb2.build(),
+    theme='streamlit-dark',
+    update_mode=GridUpdateMode.SELECTION_CHANGED,
+    allow_unsafe_jscode=True,
+    height=300,
+    key='commit_selected_grid'
+)
+
+# 2) Captura o que foi selecionado
+sel2 = grid2['selected_rows']
+if isinstance(sel2, pd.DataFrame):
+    sel2 = sel2.to_dict('records')
+else:
+    sel2 = sel2 or []
+
+st.write(f"Você selecionou {len(sel2)} deals:")
+st.write(sel2)
+
 
 
 
