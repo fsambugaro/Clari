@@ -364,7 +364,10 @@ commit_disp = df[
     'Deal Registration ID','Opportunity','Sales Team Member',
     'Stage','Close Date','Total New ASV','Next Steps'
 ]].copy()
+
+# formata Next Steps e converte Close Date para string (YYYY-MM-DD)
 commit_disp['Next Steps'] = commit_disp['Next Steps'].astype(str).str.slice(0,50)
+commit_disp['Close Date'] = commit_disp['Close Date'].dt.strftime('%Y-%m-%d')
 
 # 2) Configura AgGrid
 gb = GridOptionsBuilder.from_dataframe(commit_disp)
@@ -377,17 +380,16 @@ gb.configure_column(
 )
 gb.configure_selection(selection_mode='multiple', use_checkbox=True)
 
-# 3) Pré-seleção apenas pelos DRIDs salvos para este vendedor
+# 3) Pré-seleção apenas pelos registros cujos IDs estão salvos para este vendedor
 grid_opts = gb.build()
 grid_opts['getRowNodeId'] = JsCode(
     "function(data) { return data['Deal Registration ID']; }"
 )
-# >> em vez de passar só os IDs, passe o registro inteiro << 
+# agora passamos todo o registro (que já é convertido para primitivos)
 grid_opts['pre_selected_rows'] = commit_disp[
     commit_disp['Deal Registration ID']
       .isin(st.session_state['commit_ids_by_member'][current_member])
 ].to_dict('records')
-
 
 resp = AgGrid(
     commit_disp,
@@ -399,21 +401,13 @@ resp = AgGrid(
     key=f"upside_deals_grid_{current_member}"
 )
 
-# 4) Extrai os Deal Registration IDs direto da lista retornada
-selected = resp['selected_rows']
-# selected pode ser lista de dicts ou DataFrame; vamos garantir que seja lista de dicts
-if isinstance(selected, pd.DataFrame):
-    selected_list = selected.to_dict('records')
-else:
-    selected_list = selected or []
-
-# Agora extraímos só os IDs
+# 4) Extrai apenas os Deal Registration IDs da seleção
+raw = resp['selected_rows']
+selected_list = raw.to_dict('records') if isinstance(raw, pd.DataFrame) else (raw or [])
 new_ids = [row['Deal Registration ID'] for row in selected_list]
 
-# Atualiza a lista por vendedor
+# 5) Atualiza a lista por vendedor e persiste em disco
 st.session_state['commit_ids_by_member'][current_member] = new_ids
-
-# 5) Persiste em disco
 with open(SAVE_FILE, "w") as f:
     json.dump(st.session_state['commit_ids_by_member'], f)
 
@@ -438,6 +432,7 @@ st.download_button(
     mime='text/csv',
     key=f"download_upside_deals_{current_member}"
 )
+
 
 
 
