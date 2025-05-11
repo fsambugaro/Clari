@@ -56,10 +56,6 @@ import streamlit as st  # já deve estar importado
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DIR = os.path.join(BASE_DIR, "Data")
 
-# Salva upside deals comprometidos
-SAVE_FILE = os.path.join(DIR, "committed_ids.json")
-
-
 # Se a pasta não existir, interrompe com mensagem amigável
 if not os.path.isdir(DIR):
     st.error(f"🚨 Pasta de dados não encontrada: {DIR}")
@@ -108,25 +104,7 @@ if not file:
     st.info('Selecione um CSV para continuar')
     st.stop()
 
-df = load_data(file
-
-# carrega a lista de commits já registrados
-if 'commit_ids' not in st.session_state:
-    try:
-        with open(SAVE_FILE, "r") as f:
-            st.session_state['commit_ids'] = json.load(f)
-    except FileNotFoundError:
-        st.session_state['commit_ids'] = []
-# remove quem deixou de ser Upside (passou a Forecast)
-valid_ids = [
-    drid for drid in st.session_state['commit_ids']
-    if not (
-        (df['Deal Registration ID'] == drid) &
-        (df['Forecast Indicator'] == 'Forecast')
-    ).any()
-]
-st.session_state['commit_ids'] = valid_ids
-
+df = load_data(file)
 
 # 7) Filtros básicos
 st.sidebar.header('🔍 Filtros')
@@ -395,16 +373,6 @@ else:
     sel = raw or []
 
 commit_df = pd.DataFrame(sel, columns=commit_disp.columns)
-
-# 3.1) Atualiza a lista persistida de commit_ids
-for row in sel:
-    drid = row['Deal Registration ID']
-    if drid not in st.session_state['commit_ids']:
-        st.session_state['commit_ids'].append(drid)
-
-# 3.2) Persiste a lista em disco
-with open(SAVE_FILE, "w") as f:
-    json.dump(st.session_state['commit_ids'], f)
 
 # 4) Soma de Total New ASV
 total_asv = commit_df['Total New ASV'].sum()
