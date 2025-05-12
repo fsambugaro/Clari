@@ -394,8 +394,14 @@ resp = AgGrid(
 )
 
 # 6) Extrai os selecionados atuais (visíveis) e faz a união com os já salvos
-raw = resp["selected_rows"] or []
-visible_ids = [row["Deal Registration ID"] for row in raw]
+resp_rows = resp.get("selected_rows", [])
+if isinstance(resp_rows, pd.DataFrame):
+    current_selected = resp_rows.to_dict("records")
+else:
+    current_selected = resp_rows
+
+visible_ids = [row["Deal Registration ID"] for row in current_selected]
+
 
 prev_ids = st.session_state["commit_ids_by_member"][current_member]
 # mantém também os anteriores que NÃO estão mais visíveis no filtro atual
