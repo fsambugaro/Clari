@@ -394,6 +394,9 @@ gb.configure_selection(
 )
 
 grid_opts = gb.build()
+# habilita seleção por checkbox e múltipla via API
+grid_opts['rowSelection'] = 'multiple'
+grid_opts['rowMultiSelectWithClick'] = True
 # define ID de linha único
 grid_opts["getRowNodeId"] = JsCode(
     "function(data) { return data['Deal Registration ID']; }"
