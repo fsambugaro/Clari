@@ -1,19 +1,41 @@
+import os
+import logging
 import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-import os
 import io
 import json
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
-import logging
 
+# 1) Configuração da página — deve vir antes de qualquer st.*
+st.set_page_config(page_title="Dashboard Pipeline LATAM", layout="wide")
 
-data_path = os.path.join(os.getcwd(), "Data")
-st.write("→ Arquivos em Data/:", os.listdir(data_path) if os.path.isdir(data_path) else "Pasta Data não existe")
+# 2) Definições de caminho
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DIR = os.path.join(BASE_DIR, "Data")
 
+# 3) Configuração de logging
+LOG_FILE = os.path.join(DIR, "debug_commits.log")
+os.makedirs(DIR, exist_ok=True)
+logging.basicConfig(
+    filename=LOG_FILE,
+    filemode='a',
+    format='%(asctime)s %(levelname)s:%(message)s',
+    level=logging.DEBUG
+)
 
-# formata números no estilo US (com vírgulas de milhar e 2 casas decimais)
+# 4) Diagnóstico rápido (apenas para confirmar local do arquivo de log)
+st.write("Debug log exists at", LOG_FILE, "→", os.path.exists(LOG_FILE))
+
+# 5) Lista arquivos em Data/ (diagnóstico)
+if os.path.isdir(DIR):
+    st.write("→ Arquivos em Data/:", os.listdir(DIR))
+else:
+    st.error(f"🚨 Pasta de dados não encontrada: {DIR}")
+    st.stop()
+
+# 6) CSS para tema escuro e AgGrid
 us_format = JsCode(
     "function(params){"
     "  return params.value!=null"
@@ -22,15 +44,11 @@ us_format = JsCode(
     "    : '';"
     "}"
 )
-
-# 1) Configurações iniciais
-st.set_page_config(page_title="Dashboard Pipeline LATAM", layout="wide")
-# CSS para tema escuro geral e AgGrid
 st.markdown(
     """
     <style>
-    html, body, [data-testid=\"stAppViewContainer\"], .block-container,
-    [data-testid=\"stSidebar\"], header, [data-testid=\"stToolbar\"] {
+    html, body, [data-testid="stAppViewContainer"], .block-container,
+    [data-testid="stSidebar"], header, [data-testid="stToolbar"] {
         background-color: #111111 !important;
         color: #FFFFFF !important;
     }
@@ -38,7 +56,6 @@ st.markdown(
         background-color: #222222 !important;
         color: #FFFFFF !important;
     }
-    /* AgGrid tema escuro com fundo preto e texto branco */
     .ag-theme-streamlit-dark .ag-root-wrapper,
     .ag-theme-streamlit-dark .ag-header,
     .ag-theme-streamlit-dark .ag-cell,
@@ -50,56 +67,17 @@ st.markdown(
         background-color: #111111 !important;
     }
     </style>
-    """, unsafe_allow_html=True
+    """,
+    unsafe_allow_html=True
 )
 
-
-
-
-
-# 2) Título
+# 7) Título
 st.title("📊 LATAM Pipeline Dashboard")
 
-import os
-import streamlit as st  # já deve estar importado
-
-
-# 3) Caminho dos CSVs — busca na subpasta "Data" ao lado do app.py
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DIR = os.path.join(BASE_DIR, "Data")
-
-
-# garante que o diretório existe
-# 3.1) Configure o logger
-LOG_FILE = os.path.join(DIR, "debug_commits.log")
-os.makedirs(DIR, exist_ok=True)
-logging.basicConfig(
-    filename=LOG_FILE,
-    filemode='a',
-    format='%(asctime)s %(levelname)s:%(message)s',
-    level=logging.DEBUG
-)
-
-# 4) Diagnóstico rápido: veja se o log existe
-st.write("Debug log exists at", LOG_FILE, "→", os.path.exists(LOG_FILE))
-
-
-logging.basicConfig(
-    filename=LOG_FILE,
-    filemode='a',          # 'w' sobre escreve toda vez, 'a' anexa
-    format='%(asctime)s %(levelname)s:%(message)s',
-    level=logging.DEBUG
-)
-
-# Salva upside deals comprometidos
-SAVE_FILE = os.path.join(DIR, "committed_ids.json")
-
-
-# Se a pasta não existir, interrompe com mensagem amigável
-if not os.path.isdir(DIR):
-    st.error(f"🚨 Pasta de dados não encontrada: {DIR}")
-    st.stop()
-
+# 8) Carregamento dos CSVs na subpasta Data
+@st.cache_data
+def list_csv_files():
+    return sorted([f for f in os.listdir(DIR) if f.lower().endswith('.csv')])
 
 
 # 4) Lista de CSVs disponíveis
