@@ -28,8 +28,11 @@ logging.basicConfig(
     level=logging.DEBUG
 )
 
-# 4) Verifica existência da pasta Data
-if not os.path.isdir(DIR):
+# 4) Diagnóstico rápido
+st.write("Debug log exists at", LOG_FILE, "→", os.path.exists(LOG_FILE))
+if os.path.isdir(DIR):
+    st.write("→ Arquivos em Data/:", os.listdir(DIR))
+else:
     st.error(f"🚨 Pasta de dados não encontrada: {DIR}")
     st.stop()
 
@@ -68,7 +71,6 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
 
 # 6) Título
 st.title("📊 LATAM Pipeline Dashboard")
