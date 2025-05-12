@@ -411,7 +411,7 @@ st.sidebar.write("commit_disp IDs:", commit_disp["Deal Registration ID"].tolist(
 st.sidebar.write("grid_opts['pre_selected_rows']:", grid_opts.get("pre_selected_rows"))
 st.sidebar.write("grid_opts rowSelection:", grid_opts.get("rowSelection"))
 presel = commit_disp[commit_disp["Deal Registration ID"].isin(prev_ids)]
-st.sidebar.write("pre_selected_rows via IDs:", presel["Deal Registration ID"].tolist())[commit_disp["Deal Registration ID"].isin(prev_ids)]
+st.sidebar.write("pre_selected_rows via IDs:", presel["Deal Registration ID"].tolist())["Deal Registration ID"].tolist())[commit_disp["Deal Registration ID"].isin(prev_ids)]
 st.sidebar.write("pre_selected_rows via IDs:", presel["Deal Registration ID"].tolist())
 
 resp = AgGrid(
