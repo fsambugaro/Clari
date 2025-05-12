@@ -330,8 +330,7 @@ for col, title in extras:
         st.plotly_chart(fig, use_container_width=True)
         download_html(fig, title.replace(' ', '_').lower())
 
-
-# 15 --- Início do bloco 15: Ajustar Committed Deals ---
+#15 --- Início do bloco 15: Ajustar Committed Deals ---
 st.markdown("---")
 st.header("✅ Ajustar Committed Deals")
 
@@ -366,8 +365,13 @@ with col1:
         with open(SAVE_FILE, "w") as f:
             json.dump(st.session_state.commit_ids_by_member, f)
         st.success(f"Importados {len(ids)} IDs para {current_member}.")
-        # Reatribui prev_ids localmente
+        # Reatribui prev_ids e forçar rerun
         prev_ids = ids
+        try:
+            from streamlit.runtime.scriptrunner import RerunException
+            raise RerunException()
+        except ImportError:
+            pass
 
 with col2:
     if prev_ids:
