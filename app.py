@@ -400,7 +400,17 @@ if isinstance(resp_rows, pd.DataFrame):
 else:
     current_selected = resp_rows
 
-visible_ids = [row["Deal Registration ID"] for row in current_selected]
+# 6.1) Extrai com segurança os IDs das linhas selecionadas
+visible_ids = []
+for row in current_selected:
+    try:
+        # se for dict funciona:
+        did = row.get("Deal Registration ID") if isinstance(row, dict) else row["Deal Registration ID"]
+        if did is not None:
+            visible_ids.append(did)
+    except Exception:
+        # ignora linhas que não têm o campo esperado
+        continue
 
 
 prev_ids = st.session_state["commit_ids_by_member"][current_member]
