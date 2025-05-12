@@ -15,6 +15,9 @@ st.set_page_config(page_title="Dashboard Pipeline LATAM", layout="wide")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DIR = os.path.join(BASE_DIR, "Data")
 
+# 2.1) Definição do arquivo de commits (precisa antes de qualquer uso)
+SAVE_FILE = os.path.join(DIR, "committed_ids_by_member.json")
+
 # 3) Configuração de logging
 LOG_FILE = os.path.join(DIR, "debug_commits.log")
 os.makedirs(DIR, exist_ok=True)
@@ -25,17 +28,15 @@ logging.basicConfig(
     level=logging.DEBUG
 )
 
-# 4) Diagnóstico rápido (apenas para confirmar local do arquivo de log)
+# 4) Diagnóstico rápido
 st.write("Debug log exists at", LOG_FILE, "→", os.path.exists(LOG_FILE))
-
-# 5) Lista arquivos em Data/ (diagnóstico)
 if os.path.isdir(DIR):
     st.write("→ Arquivos em Data/:", os.listdir(DIR))
 else:
     st.error(f"🚨 Pasta de dados não encontrada: {DIR}")
     st.stop()
 
-# 6) CSS para tema escuro e AgGrid
+# 5) CSS para tema escuro e AgGrid
 us_format = JsCode(
     "function(params){"
     "  return params.value!=null"
@@ -71,21 +72,15 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# 7) Título
+# 6) Título
 st.title("📊 LATAM Pipeline Dashboard")
 
-# 8) Carregamento dos CSVs na subpasta Data
+# 7) Carregamento dos CSVs na subpasta Data
 @st.cache_data
 def list_csv_files():
     return sorted([f for f in os.listdir(DIR) if f.lower().endswith('.csv')])
 
-
-# 4) Lista de CSVs disponíveis
-@st.cache_data
-def list_csv_files():
-    return sorted([f for f in os.listdir(DIR) if f.lower().endswith('.csv')])
-
-# 5) Carrega e sanitiza dados
+# 8) Carrega e sanitiza dados
 def load_data(path):
     df = pd.read_csv(os.path.join(DIR, path))
     df.columns = df.columns.str.strip()
@@ -98,7 +93,7 @@ def load_data(path):
           .str.replace(r"[\$,]", '', regex=True)
           .astype(float)
     )
-    # Converte campos numéricos adicionais para float, para alinhamento correto
+    # Converte campos numéricos adicionais para float
     for col in ['Renewal Bookings','Total DMe Est HASV','Total Attrition','Total TSV','Total Renewal ASV']:
         if col in df.columns:
             df[col] = (
@@ -114,7 +109,7 @@ def load_data(path):
         df['Region'] = 'Other'
     return df
 
-# 6) Seleção de CSV
+# 9) Seleção de CSV
 st.sidebar.header('📂 Select CSV file')
 file = st.sidebar.selectbox('File:', [''] + list_csv_files())
 if not file:
@@ -122,17 +117,7 @@ if not file:
     st.stop()
 
 df = load_data(file)
-
-full_df = df.copy()   # backup do dataset completo, antes dos filtros
-
-
-# carrega o dicionário de commit_ids por vendedor
-if 'commit_ids_by_member' not in st.session_state:
-    try:
-        with open(SAVE_FILE, "r") as f:
-            st.session_state['commit_ids_by_member'] = json.load(f)
-    except FileNotFoundError:
-        st.session_state['commit_ids_by_member'] = {}
+full_df = df.copy()  # backup do dataset completo, antes dos filtros
 
 
 # 7) Filtros básicos
