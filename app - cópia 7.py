@@ -408,6 +408,7 @@ resp = AgGrid(
 )
 
 # 6) Extrai os selecionados atuais (visíveis) e faz a união com os já salvos
+
 # 6.1) Normaliza resposta em lista de dicionários
 resp_rows = resp.get("selected_rows", [])
 if isinstance(resp_rows, pd.DataFrame):
@@ -426,10 +427,7 @@ visible_ids = [row.get("Deal Registration ID")
 
 # 6.3) Junta com os IDs já salvos (mesmo os que ficaram ocultos pelo filtro)
 prev_ids = st.session_state["commit_ids_by_member"][current_member]
-hidden_prev = [
-    i for i in prev_ids
-    if i not in _commit_disp["Deal Registration ID"].tolist()
-]
+hidden_prev = [i for i in prev_ids if i not in _commit_disp["Deal Registration ID"].tolist()]
 all_ids = list(dict.fromkeys(hidden_prev + visible_ids))
 
 # 6.4) Atualiza o estado e persiste
