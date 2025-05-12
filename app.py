@@ -438,6 +438,36 @@ hidden_prev = [
 ]
 all_ids = list(dict.fromkeys(hidden_prev + visible_ids))
 
+# 7) Exibe a tabela final e soma de ASV usando o dataset completo
+commit_df = full_df[
+    full_df["Deal Registration ID"].isin(
+        st.session_state["commit_ids_by_member"][current_member]
+    )
+].copy()
+
+total_asv = commit_df["Total New ASV"].sum()
+st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
+
+# --- aqui mostramos os deals selecionados ---
+st.subheader("🚀 Deals selecionados")
+gb2 = GridOptionsBuilder.from_dataframe(commit_df)
+gb2.configure_default_column(cellStyle={"color":"white","backgroundColor":"#000000"})
+gb2.configure_column(
+    "Total New ASV",
+    type=["numericColumn","numberColumnFilter"],
+    cellStyle={"textAlign":"right","color":"white","backgroundColor":"#000000"},
+    cellRenderer=us_format,
+)
+AgGrid(
+    commit_df,
+    gridOptions=gb2.build(),
+    theme="streamlit-dark",
+    update_mode=GridUpdateMode.NO_UPDATE,
+    allow_unsafe_jscode=True,
+    height=300,
+    key=f"commit_selected_{current_member}"
+)
+
 
 # 16) Dados Brutos e ficha detalhada e ficha detalhada
 st.header('📋 Dados Brutos')
