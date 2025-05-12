@@ -420,13 +420,10 @@ visible_ids = [
     if isinstance(row, dict) and row.get("Deal Registration ID") is not None
 ]
 
-# 7) Une com IDs salvos originalmente (mesmo ocultos pelo filtro)
+# 7) Une com IDs salvos anteriormente (mantém todos eles) e acrescenta os novos visíveis
 prev_ids = st.session_state["commit_ids_by_member"][current_member]
-hidden_prev = [
-    i for i in prev_ids
-    if i not in _commit_disp["Deal Registration ID"].tolist()
-]
-all_ids = list(dict.fromkeys(hidden_prev + visible_ids))
+all_ids = list(dict.fromkeys(prev_ids + visible_ids))
+
 
 # 8) Persiste
 st.session_state["commit_ids_by_member"][current_member] = all_ids
