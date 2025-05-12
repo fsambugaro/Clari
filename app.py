@@ -356,6 +356,15 @@ full_df["is_upside"] = full_df["Forecast Indicator"].isin(["Upside", "Upside - T
 
 prev_ids = st.session_state["commit_ids_by_member"][current_member]
 
+# Define colunas que exibiremos
+cols_to_show = [
+    "Deal Registration ID",
+    "Opportunity",
+    "Total New ASV",
+    "Stage",
+    "Forecast Indicator"
+]
+
 # Seleciona linhas que são Upside ou já persistidas
 commit_disp = full_df[
     full_df["is_upside"] | full_df["Deal Registration ID"].isin(prev_ids)
@@ -363,7 +372,7 @@ commit_disp = full_df[
 # Limita colunas exibidas
 commit_disp = commit_disp[cols_to_show]
 
-# 3) Configura AgGrid de seleção
+# 3")]}) Configura AgGrid de seleção
 # pré-seleciona pelos IDs já salvos
 gb = GridOptionsBuilder.from_dataframe(commit_disp)
 gb.configure_default_column(cellStyle={"color":"white","backgroundColor":"#000000"})
