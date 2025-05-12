@@ -425,9 +425,13 @@ else:
         key=f"commit_grid_{current_member}"
     )
 
-    # Extrai seleção e persiste
+        # Extrai seleção e persiste
     sel_rows = resp.get("selected_rows", [])
-    sel_ids = [r.get("Deal Registration ID") for r in sel_rows if r.get("Deal Registration ID")]
+    sel_ids = []
+    if isinstance(sel_rows, list):
+        for row in sel_rows:
+            if isinstance(row, dict) and "Deal Registration ID" in row:
+                sel_ids.append(row["Deal Registration ID"])
     st.session_state.commit_ids_by_member[current_member] = sel_ids
     with open(SAVE_FILE, "w") as f:
         json.dump(st.session_state.commit_ids_by_member, f)
@@ -455,6 +459,18 @@ else:
         update_mode=GridUpdateMode.NO_UPDATE,
         allow_unsafe_jscode=True,
         height=300,
+        key=f"commit_selected_{current_member}"
+    )
+
+    csv_bytes = commit_df.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        label="⬇️ Download Committed Deals (CSV)",
+        data=csv_bytes,
+        file_name=f"committed_deals_{current_member}.csv",
+        mime="text/csv",
+        key=f"download_commits_final_{current_member}"
+    )
+
         key=f"commit_selected_{current_member}"
     )
 
