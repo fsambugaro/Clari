@@ -331,6 +331,7 @@ for col, title in extras:
         download_html(fig, title.replace(' ', '_').lower())
 
 
+
 # 15) Seleção e exibição de Committed Deals por vendedor
 st.markdown("---")
 st.header("✅ Ajustar Committed Deals")
@@ -379,16 +380,16 @@ df["Deal Registration ID"] = df["Deal Registration ID"].astype(str)
 # Marca os persistidos
 df["selected"] = df["Deal Registration ID"].isin(prev_ids)
 
-# 4) Exibe DataEditor para seleção múltipla
-edited = st.data_editor(
+# 4) Exibe Experimental Data Editor para seleção múltipla
+edited = st.experimental_data_editor(
     df,
     num_rows="dynamic",
-    column_config={"selected": st.column_config.CheckboxColumn(header="Selecionar")},
+    use_checkbox=True,
     hide_index=True,
     key=f"editor_commits_{current_member}"
 )
 
-# 5) Extrai seleção e persiste
+# 5) Extrai seleção e persiste) Extrai seleção e persiste
 sel_ids = edited.loc[edited["selected"], "Deal Registration ID"].tolist()
 st.session_state.commit_ids_by_member[current_member] = sel_ids
 with open(SAVE_FILE, "w") as f:
@@ -405,6 +406,7 @@ st.download_button("⬇️ Download Committed Deals (CSV)",
                    data=csv_out,
                    file_name=f"committed_deals_{current_member}.csv",
                    mime="text/csv")
+
 
 
 
