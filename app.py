@@ -8,6 +8,12 @@ import json
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
 import logging
 
+st.write("→ CWD (diretório atual):", os.getcwd())
+st.write("→ Arquivos no root do app:", os.listdir(os.getcwd()))
+
+data_path = os.path.join(os.getcwd(), "Data")
+st.write("→ Arquivos em Data/:", os.listdir(data_path) if os.path.isdir(data_path) else "Pasta Data não existe")
+
 
 # formata números no estilo US (com vírgulas de milhar e 2 casas decimais)
 us_format = JsCode(
