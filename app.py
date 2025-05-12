@@ -382,15 +382,17 @@ gb.configure_column(
     cellStyle={"textAlign":"right","color":"white","backgroundColor":"#000000"},
     cellRenderer=us_format,
 )
-# Configura seleção múltipla com pré-seleção
+# Configura seleção múltipla e pre-seleção
 gb.configure_selection(
     "multiple",
-    use_checkbox=True,
-    pre_selected_rows=commit_disp[
-        commit_disp["Deal Registration ID"].isin(prev_ids)
-    ].to_dict("records")
+    use_checkbox=True
 )
 grid_opts = gb.build()
+# define pré-seleção manualmente
+grid_opts["getRowNodeId"] = JsCode(
+    "function(data) { return data['Deal Registration ID']; }"
+)
+grid_opts["pre_selected_rows"] = commit_disp[commit_disp["Deal Registration ID"].isin(prev_ids)].to_dict("records")()
 
 grid_opts["getRowNodeId"] = JsCode(
     "function(data) { return data['Deal Registration ID']; }"
