@@ -416,17 +416,7 @@ resp = AgGrid(
     key=f"commit_grid_{current_member}"
 )
 
-resp = AgGrid(
-    commit_disp,
-    gridOptions=grid_opts,
-    theme="streamlit-dark",
-    update_mode=GridUpdateMode.SELECTION_CHANGED,
-    allow_unsafe_jscode=True,
-    height=350,
-    key=f"commit_grid_{current_member}"
-)
-
-# 6) Extrai seleção atual e persiste
+# 6) Extrai seleção atual e persiste) Extrai seleção atual e persiste
 resp_rows = resp.get("selected_rows", [])
 current_selected = (
     resp_rows.to_dict("records") if isinstance(resp_rows, pd.DataFrame)
