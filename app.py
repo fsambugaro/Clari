@@ -340,7 +340,7 @@ for col, title in extras:
 st.markdown("---")
 st.header("✅ Upside deals to reach commit")
 
-# 0) Arquivo onde guardamos o dicionário member → [DRIDs]
+# arquivo onde guardamos o dicionário member → [DRIDs]
 SAVE_FILE = os.path.join(DIR, "committed_ids_by_member.json")
 
 # 1) Inicializa ou carrega de disco o dict de listas
@@ -351,7 +351,6 @@ if "commit_ids_by_member" not in st.session_state:
     except FileNotFoundError:
         st.session_state["commit_ids_by_member"] = {}
 
-# chave do vendedor atual (ou "__ALL__" quando "Todos")
 current_member = sel_member if sel_member != "Todos" else "__ALL__"
 st.session_state["commit_ids_by_member"].setdefault(current_member, [])
 
@@ -373,13 +372,17 @@ gb.configure_column(
 gb.configure_selection("multiple", use_checkbox=True)
 grid_opts = gb.build()
 
-# 4) Define a chave única como o DRID e pré-seleciona só a lista de IDs
+# 4) Define a chave única como o DRID e pré-seleciona pelos IDs salvos
 grid_opts["getRowNodeId"] = JsCode(
     "function(data) { return data['Deal Registration ID']; }"
 )
-grid_opts["pre_selected_rows"] = st.session_state["commit_ids_by_member"][current_member]
+grid_opts["pre_selected_rows"] = commit_disp[
+    commit_disp["Deal Registration ID"].isin(
+        st.session_state["commit_ids_by_member"][current_member]
+    )
+].to_dict("records")
 
-# 5) Renderiza
+# 5) Renderiza a grid
 resp = AgGrid(
     commit_disp,
     gridOptions=grid_opts,
@@ -390,21 +393,30 @@ resp = AgGrid(
     key=f"commit_grid_{current_member}"
 )
 
-# 6) Extrai novos selecionados e persiste em session_state + JSON
-raw = resp["selected_rows"]
-if isinstance(raw, pd.DataFrame):
-    selected = raw.to_dict("records")
-else:
-    selected = raw or []
+# 6) Extrai os selecionados atuais (visíveis) e faz a união com os já salvos
+raw = resp["selected_rows"] or []
+visible_ids = [row["Deal Registration ID"] for row in raw]
 
-new_ids = [row["Deal Registration ID"] for row in selected]
-st.session_state["commit_ids_by_member"][current_member] = new_ids
+prev_ids = st.session_state["commit_ids_by_member"][current_member]
+# mantém também os anteriores que NÃO estão mais visíveis no filtro atual
+hidden_prev = [i for i in prev_ids if i not in commit_disp["Deal Registration ID"].tolist()]
 
+# nova lista é união de hidden_prev + visible_ids
+all_ids = list(dict.fromkeys(hidden_prev + visible_ids))
+
+st.session_state["commit_ids_by_member"][current_member] = all_ids
+
+# persiste em disco
 with open(SAVE_FILE, "w") as f:
     json.dump(st.session_state["commit_ids_by_member"], f)
 
-# 7) Exibe a tabela final e soma de ASV
-commit_df = pd.DataFrame(selected, columns=commit_disp.columns)
+# 7) Exibe a tabela final e soma de ASV usando o dataset completo
+commit_df = full_df[
+    full_df["Deal Registration ID"].isin(
+        st.session_state["commit_ids_by_member"][current_member]
+    )
+].copy()
+
 total_asv = commit_df["Total New ASV"].sum()
 st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
 
