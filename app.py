@@ -336,11 +336,11 @@ for col, title in extras:
         download_html(fig, title.replace(' ', '_').lower())
 
 
-# 15) Seleção e exibição de Committed Deals
+# 15) Seleção e exibição de Committed Deals por vendedor
 st.markdown("---")
 st.header("✅ Upside deals to reach commit")
 
-# (a) Inicializa a lista persistente de IDs comprometidos
+# (a) Inicializa a lista persistente de IDs
 if "commit_ids" not in st.session_state:
     st.session_state["commit_ids"] = []
 
@@ -350,34 +350,36 @@ sel_df = df[
     & ~df["Stage"].isin(["Closed - Booked", "07 - Execute to Close", "02 - Prospect"])
 ].copy()
 
-# (c) Marca na coluna “Commit?” quem já está na sessão
+# (c) Cria a coluna booleana e garante dtype=bool
 sel_df["Commit?"] = sel_df["Deal Registration ID"].astype(str).isin(
     st.session_state["commit_ids"]
 )
+sel_df["Commit?"] = sel_df["Commit?"].astype(bool)
 
-# (d) Exibe no data_editor com checkbox
+# (d) Exibe no data_editor COM checkbox column
 edited = st.data_editor(
     sel_df,
     column_config={
         "Commit?": st.column_config.CheckboxColumn(
             "Commit?",
             help="Marque para incluir este deal no commit",
+            editable=True,
         )
     },
     hide_index=True,
     use_container_width=True,
 )
 
-# (e) Recolhe os IDs marcados e atualiza sessão
-new_ids = (
+# (e) Recolhe IDs marcados e atualiza a sessão
+chosen = (
     edited.loc[edited["Commit?"], "Deal Registration ID"]
     .astype(str)
     .tolist()
 )
-st.session_state["commit_ids"] = new_ids
+st.session_state["commit_ids"] = chosen
 
-# (f) Monta o DataFrame final dos selecionados, soma e exibe
-commit_df = sel_df[sel_df["Deal Registration ID"].astype(str).isin(new_ids)]
+# (f) Monta e exibe a tabela final dos selecionados
+commit_df = sel_df[sel_df["Deal Registration ID"].astype(str).isin(chosen)]
 total_asv = commit_df["Total New ASV"].sum()
 st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
 
@@ -390,10 +392,10 @@ st.dataframe(
 )
 
 # (g) Botão de download
-csv_upside = commit_df.to_csv(index=False).encode("utf-8")
+csv_buf = commit_df.to_csv(index=False).encode("utf-8")
 st.download_button(
     "⬇️ Download Upside Deals (CSV)",
-    data=csv_upside,
+    data=csv_buf,
     file_name="upside_deals.csv",
     mime="text/csv",
     key="download_upside_deals",
