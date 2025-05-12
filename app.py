@@ -360,8 +360,6 @@ with col1:
         ids_list = df_upload["Deal Registration ID"].dropna().unique().tolist()
         st.session_state["commit_ids_by_member"][current_member] = ids_list
         st.success(f"Importados {len(ids_list)} IDs para {current_member}.")
-        # Recarrega o app para aplicar o upload imediatamente
-        st.experimental_rerun()
 with col2:
     existing = st.session_state["commit_ids_by_member"].get(current_member, [])
     if existing:
@@ -376,16 +374,17 @@ with col2:
 
 # 3) Prepara DataFrame para seleção: prev_ids + Upside atuais
 prev_ids = st.session_state["commit_ids_by_member"].get(current_member, [])
-
 df_select = full_df.copy()
 df_select["Deal Registration ID"] = df_select["Deal Registration ID"].astype(str)
 df_select["is_upside"] = df_select["Forecast Indicator"].isin(["Upside","Upside - Targeted"])
 
-# se não houver IDs e nenhuma oportunidade Upside
+# Se não houver lista e nenhum Upside, orienta upload
 if not prev_ids and not df_select["is_upside"].any():
     st.info("Nenhuma lista de Commit IDs e nenhum Upside disponível. Faça upload de um CSV para iniciar.")
 else:
-    commit_disp = df_select[ df_select["is_upside"] | df_select["Deal Registration ID"].isin(prev_ids) ]
+    commit_disp = df_select[
+        df_select["is_upside"] | df_select["Deal Registration ID"].isin(prev_ids)
+    ].copy()
     cols_to_show = ["Deal Registration ID","Opportunity","Total New ASV","Stage","Forecast Indicator"]
     commit_disp = commit_disp[cols_to_show]
 
@@ -402,26 +401,30 @@ else:
     grid_opts = gb.build()
     grid_opts["getRowNodeId"] = JsCode("function(data) { return data['Deal Registration ID']; }")
 
-    # 5) Renderiza grid de seleção e extrai IDs
+    # 5) Pré-seleção de IDs persistidos
+    pre_sel = commit_disp[commit_disp["Deal Registration ID"].isin(prev_ids)]
+
+    # 6) Renderiza grid de seleção com pré-seleção
     resp = AgGrid(
         commit_disp,
         gridOptions=grid_opts,
+        pre_selected_rows=pre_sel.to_dict("records"),
         theme="streamlit-dark",
         update_mode=GridUpdateMode.SELECTION_CHANGED,
         allow_unsafe_jscode=True,
         height=350,
         key=f"commit_grid_{current_member}"
     )
+
+    # 7) Extrai seleção atual e atualiza persistência
     raw = resp.get("selected_rows", [])
     current_selected = raw.to_dict("records") if isinstance(raw, pd.DataFrame) else raw or []
     sel_ids = [r["Deal Registration ID"] for r in current_selected if r.get("Deal Registration ID")]
-
-    # 6) Atualiza persistência e salva arquivo
     st.session_state["commit_ids_by_member"][current_member] = sel_ids
     with open(SAVE_FILE, "w") as f:
         json.dump(st.session_state["commit_ids_by_member"], f)
 
-    # 7) Exibe tabela final e botão de download
+    # 8) Exibe tabela final e botão de download
     commit_df = full_df[full_df["Deal Registration ID"].isin(sel_ids)].copy()
     total_asv = commit_df["Total New ASV"].sum()
     st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
@@ -453,8 +456,6 @@ else:
         mime='text/csv',
         key=f'download_commits_{current_member}'
     )
-
-
 
 #16 DEBUG (cole isto após o seu bloco #15)
 #if os.path.exists(LOG_FILE):
