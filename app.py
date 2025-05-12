@@ -360,7 +360,11 @@ _commit_disp = df[
     & ~df["Stage"].isin(["Closed - Booked", "07 - Execute to Close", "02 - Prospect"])
 ].copy()
 
-# 2.1) Mantém só as colunas simples para o AgGrid de seleção
+# 2.1) FORÇAR string no ID tanto em _commit_disp quanto no full_df
+_commit_disp["Deal Registration ID"] = _commit_disp["Deal Registration ID"].astype(str)
+full_df["Deal Registration ID"]   = full_df["Deal Registration ID"].astype(str)
+
+# 2.2) Mantém só as colunas simples para o AgGrid de seleção
 cols_to_show = [
     "Deal Registration ID",
     "Opportunity",
@@ -369,11 +373,6 @@ cols_to_show = [
     "Forecast Indicator"
 ]
 commit_disp = _commit_disp[cols_to_show].copy()
-
-# (Opcional: se tiver datetime em outras colunas, converta-as para string:
-# if "Close Date" in commit_disp.columns:
-#     commit_disp["Close Date"] = commit_disp["Close Date"].dt.strftime("%Y-%m-%d")
-# )
 
 # 3) Configura AgGrid para seleção múltipla por checkbox
 gb = GridOptionsBuilder.from_dataframe(commit_disp)
@@ -421,22 +420,20 @@ elif isinstance(resp_rows, list):
 else:
     current_selected = []
 
-# 6.2) Extrai com segurança os IDs das linhas selecionadas
-visible_ids = []
-for row in current_selected:
-    if isinstance(row, dict):
-        did = row.get("Deal Registration ID")
-        if did is not None:
-            visible_ids.append(did)
+# 6.2) Extrai com segurança os IDs das linhas selecionadas (já em str)
+visible_ids = [row.get("Deal Registration ID") 
+               for row in current_selected 
+               if isinstance(row, dict) and row.get("Deal Registration ID")]
 
 # 6.3) Junta com os IDs já salvos (mesmo os que ficaram ocultos pelo filtro)
 prev_ids = st.session_state["commit_ids_by_member"][current_member]
-
-hidden_prev = [
-    i for i in prev_ids
-    if i not in _commit_disp["Deal Registration ID"].tolist()
-]
+hidden_prev = [i for i in prev_ids if i not in _commit_disp["Deal Registration ID"].tolist()]
 all_ids = list(dict.fromkeys(hidden_prev + visible_ids))
+
+# 6.4) Atualiza o estado e persiste
+st.session_state["commit_ids_by_member"][current_member] = all_ids
+with open(SAVE_FILE, "w") as f:
+    json.dump(st.session_state["commit_ids_by_member"], f)
 
 # 7) Exibe a tabela final e soma de ASV usando o dataset completo
 commit_df = full_df[
@@ -448,7 +445,7 @@ commit_df = full_df[
 total_asv = commit_df["Total New ASV"].sum()
 st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
 
-# --- aqui mostramos os deals selecionados ---
+# mostra os deals selecionados
 st.subheader("🚀 Deals selecionados")
 gb2 = GridOptionsBuilder.from_dataframe(commit_df)
 gb2.configure_default_column(cellStyle={"color":"white","backgroundColor":"#000000"})
