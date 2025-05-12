@@ -360,19 +360,19 @@ with col1:
     )
     if uploaded:
         df_up = pd.read_csv(uploaded, dtype=str)
-        ids = df_up.get("Deal Registration ID", pd.Series(dtype=str)).dropna().astype(str).unique().tolist()
+        ids = df_up.get("Deal Registration ID", pd.Series(dtype=str))
+        ids = ids.dropna().astype(str).unique().tolist()
         st.session_state.commit_ids_by_member[current_member] = ids
         with open(SAVE_FILE, "w") as f:
             json.dump(st.session_state.commit_ids_by_member, f)
         st.success(f"Importados {len(ids)} IDs para {current_member}.")
-        # Atualiza prev_ids para uso imediato
         prev_ids = ids
 with col2:
     if prev_ids:
         buf = io.StringIO()
         pd.DataFrame({"Deal Registration ID": prev_ids}).to_csv(buf, index=False)
         st.download_button(
-            "⬇️ Download lista atual",
+            label="⬇️ Download lista atual",
             data=buf.getvalue(),
             file_name=f"commit_ids_{current_member}.csv",
             mime="text/csv",
@@ -384,7 +384,6 @@ df_select = full_df.copy()
 df_select["Deal Registration ID"] = df_select["Deal Registration ID"].astype(str)
 df_select["is_upside"] = df_select["Forecast Indicator"].isin(["Upside", "Upside - Targeted"])
 
-# Se não há IDs e nem Upside, exibe orientação
 if not prev_ids and not df_select["is_upside"].any():
     st.info("Nenhuma lista de Commit IDs e nenhum Upside disponível. Faça upload de um CSV para iniciar.")
 else:
@@ -395,19 +394,25 @@ else:
 
     # Configura AgGrid
     gb = GridOptionsBuilder.from_dataframe(commit_disp)
-    gb.configure_default_column(cellStyle={"color":"white","backgroundColor":"#000000"})
+    gb.configure_default_column(
+        cellStyle={"color": "white", "backgroundColor": "#000000"}
+    )
     gb.configure_column(
         "Total New ASV",
-        type=["numericColumn","numberColumnFilter"],
-        cellStyle={"textAlign":"right","color":"white","backgroundColor":"#000000"},
-        cellRenderer=us_format,
+        type=["numericColumn", "numberColumnFilter"],
+        cellStyle={"textAlign": "right", "color": "white", "backgroundColor": "#000000"},
+        cellRenderer=us_format
     )
     gb.configure_selection("multiple", use_checkbox=True)
     grid_opts = gb.build()
-    grid_opts["getRowNodeId"] = JsCode("function(data){return data['Deal Registration ID'];}")
+    grid_opts["getRowNodeId"] = JsCode(
+        "function(data) { return data['Deal Registration ID']; }"
+    )
 
-    # Pré-seleciona protocolos existentes
-    pre_sel = commit_disp[commit_disp["Deal Registration ID"].isin(prev_ids)]
+    # Pré-seleciona registros existentes
+    pre_sel = commit_disp[
+        commit_disp["Deal Registration ID"].isin(prev_ids)
+    ]
 
     # Renderiza grid com seleção
     resp = AgGrid(
@@ -422,25 +427,27 @@ else:
     )
 
     # Extrai seleção e persiste
-    sel_rows = resp.get("selected_rows", []) or []
-    sel_ids = [r.get("Deal Registration ID") for r in sel_rows]
+    sel_rows = resp.get("selected_rows", [])
+    sel_ids = [r.get("Deal Registration ID") for r in sel_rows if r.get("Deal Registration ID")]
     st.session_state.commit_ids_by_member[current_member] = sel_ids
     with open(SAVE_FILE, "w") as f:
         json.dump(st.session_state.commit_ids_by_member, f)
 
     # Exibe tabela final e botão de download
-    commit_df = full_df[full_df["Deal Registration ID"].isin(sel_ids)].copy()
+    commit_df = full_df[ full_df["Deal Registration ID"].isin(sel_ids) ].copy()
     total_asv = commit_df["Total New ASV"].sum()
     st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
     st.subheader("🚀 Deals selecionados")
 
     gb2 = GridOptionsBuilder.from_dataframe(commit_df)
-    gb2.configure_default_column(cellStyle={"color":"white","backgroundColor":"#000000"})
+    gb2.configure_default_column(
+        cellStyle={"color": "white", "backgroundColor": "#000000"}
+    )
     gb2.configure_column(
         "Total New ASV",
-        type=["numericColumn","numberColumnFilter"],
-        cellStyle={"textAlign":"right","color":"white","backgroundColor":"#000000"},
-        cellRenderer=us_format,
+        type=["numericColumn", "numberColumnFilter"],
+        cellStyle={"textAlign": "right", "color": "white", "backgroundColor": "#000000"},
+        cellRenderer=us_format
     )
     AgGrid(
         commit_df,
@@ -454,22 +461,13 @@ else:
 
     csv_bytes = commit_df.to_csv(index=False).encode("utf-8")
     st.download_button(
-        "⬇️ Download Committed Deals (CSV)",
+        label="⬇️ Download Committed Deals (CSV)",
         data=csv_bytes,
         file_name=f"committed_deals_{current_member}.csv",
         mime="text/csv",
         key=f"download_commits_final_{current_member}"
     )
-```
-)
-
-csv_bytes = commit_df.to_csv(index=False).encode("utf-8")
-st.download_button(
-    "⬇️ Download Committed Deals (CSV)",
-    data=csv_bytes,
-    file_name=f"committed_deals_{current_member}.csv",
-    mime="text/csv",
-    key=f"download_commits_final_{current_member}"
+mits_final_{current_member}"
 )
 # --- Fim do bloco 15 ---
 
