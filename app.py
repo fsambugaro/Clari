@@ -407,7 +407,11 @@ grid_opts["getRowNodeId"] = JsCode(
 st.sidebar.markdown("### 🔧 Debug pré-seleção")
 st.sidebar.write("prev_ids:", prev_ids)
 st.sidebar.write("commit_disp IDs:", commit_disp["Deal Registration ID"].tolist())
+# mostra pre_selected_rows definido no grid_opts
+st.sidebar.write("grid_opts['pre_selected_rows']:", grid_opts.get("pre_selected_rows"))
+st.sidebar.write("grid_opts rowSelection:", grid_opts.get("rowSelection"))
 presel = commit_disp[commit_disp["Deal Registration ID"].isin(prev_ids)]
+st.sidebar.write("pre_selected_rows via IDs:", presel["Deal Registration ID"].tolist())[commit_disp["Deal Registration ID"].isin(prev_ids)]
 st.sidebar.write("pre_selected_rows via IDs:", presel["Deal Registration ID"].tolist())
 
 resp = AgGrid(
