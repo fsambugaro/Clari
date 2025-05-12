@@ -466,12 +466,25 @@ AgGrid(
 # (cole isto após o seu bloco #15)
 if os.path.exists(LOG_FILE):
     with open(LOG_FILE, "r") as f:
-        lines = f.readlines()[-20:]  # pega as últimas 20 linhas
-    st.subheader("📝 Últimas entradas do debug_commits.log")
-    st.code("".join(lines))
+        lines = f.readlines()
+    # filtra apenas as linhas com nossas tags de debug
+    tags = [
+        "resp_rows raw",
+        "current_selected",
+        "visible_ids",
+        "prev_ids",
+        "hidden_prev",
+        "all_ids",
+        "commit_df IDs"
+    ]
+    filtered = [l for l in lines if any(tag in l for tag in tags)]
+    st.subheader("📝 Entradas relevantes do debug_commits.log")
+    if filtered:
+        st.code("".join(filtered[-20:]))
+    else:
+        st.info("Nenhuma entrada de debug encontrada ainda.")
 else:
-    st.info("Nenhum log encontrado ainda em " + LOG_FILE)
-
+    st.info("Arquivo de log não existe: " + LOG_FILE)
 
 # 16) Dados Brutos e ficha detalhada e ficha detalhada
 st.header('📋 Dados Brutos')
