@@ -331,7 +331,6 @@ for col, title in extras:
         download_html(fig, title.replace(' ', '_').lower())
 
 
-
 # 15) Seleção e exibição de Committed Deals por vendedor
 st.markdown("---")
 st.header("✅ Ajustar Committed Deals")
@@ -360,8 +359,8 @@ with col1:
     )
     if uploaded:
         df_up = pd.read_csv(uploaded, dtype=str)
-        ids = df_up.get("Deal Registration ID", pd.Series(dtype=str))
-        ids = ids.dropna().astype(str).unique().tolist()
+        ids_series = df_up.get("Deal Registration ID", pd.Series(dtype=str))
+        ids = ids_series.dropna().astype(str).unique().tolist()
         st.session_state.commit_ids_by_member[current_member] = ids
         with open(SAVE_FILE, "w") as f:
             json.dump(st.session_state.commit_ids_by_member, f)
@@ -434,7 +433,7 @@ else:
         json.dump(st.session_state.commit_ids_by_member, f)
 
     # Exibe tabela final e botão de download
-    commit_df = full_df[ full_df["Deal Registration ID"].isin(sel_ids) ].copy()
+    commit_df = full_df[full_df["Deal Registration ID"].isin(sel_ids)].copy()
     total_asv = commit_df["Total New ASV"].sum()
     st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
     st.subheader("🚀 Deals selecionados")
@@ -467,9 +466,7 @@ else:
         mime="text/csv",
         key=f"download_commits_final_{current_member}"
     )
-mits_final_{current_member}"
-)
-# --- Fim do bloco 15 ---
+
 
 
 
