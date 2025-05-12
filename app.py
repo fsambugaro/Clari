@@ -373,6 +373,7 @@ persist_df = full_df[full_df["Deal Registration ID"].isin(prev_ids)][cols_to_sho
 commit_disp = pd.concat([_commit_disp[cols_to_show], persist_df]).drop_duplicates("Deal Registration ID")
 
 # 3) Configura AgGrid de seleção
+# pré-seleciona pelos IDs já salvos
 gb = GridOptionsBuilder.from_dataframe(commit_disp)
 gb.configure_default_column(cellStyle={"color":"white","backgroundColor":"#000000"})
 gb.configure_column(
@@ -381,15 +382,19 @@ gb.configure_column(
     cellStyle={"textAlign":"right","color":"white","backgroundColor":"#000000"},
     cellRenderer=us_format,
 )
-gb.configure_selection("multiple", use_checkbox=True)
+# Configura seleção múltipla com pré-seleção
+gb.configure_selection(
+    "multiple",
+    use_checkbox=True,
+    pre_selected_rows=commit_disp[
+        commit_disp["Deal Registration ID"].isin(prev_ids)
+    ].to_dict("records")
+)
 grid_opts = gb.build()
 
 grid_opts["getRowNodeId"] = JsCode(
     "function(data) { return data['Deal Registration ID']; }"
 )
-grid_opts["pre_selected_rows"] = commit_disp[
-    commit_disp["Deal Registration ID"].isin(prev_ids)
-].to_dict("records")
 
 # 4) Renderiza grid de seleção
 resp = AgGrid(
@@ -402,7 +407,7 @@ resp = AgGrid(
     key=f"commit_grid_{current_member}"
 )
 
-# 5) Normaliza e extrai IDs visíveis
+# 5) Normaliza e extrai IDs visíveis e extrai IDs visíveis
 resp_rows = resp.get("selected_rows", [])
 if isinstance(resp_rows, pd.DataFrame):
     current_selected = resp_rows.to_dict("records")
@@ -460,11 +465,6 @@ st.download_button(
     key=f'download_commits_{current_member}'
 )
 
-st.sidebar.write("prev_ids:", prev_ids)
-st.sidebar.write("visible_ids:", visible_ids)
-st.sidebar.write("all_ids:", all_ids)
-st.sidebar.write("commit_disp IDs:", commit_disp["Deal Registration ID"].tolist())
-st.sidebar.write("commit_df IDs:", commit_df["Deal Registration ID"].tolist())
 
 #16 DEBUG (cole isto após o seu bloco #15)
 #if os.path.exists(LOG_FILE):
