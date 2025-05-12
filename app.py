@@ -6,19 +6,7 @@ import os
 import io
 import json
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
-
 import logging
-
-# garante que o diretório existe
-LOG_FILE = os.path.join(DIR, "debug_commits.log")
-os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
-
-logging.basicConfig(
-    filename=LOG_FILE,
-    filemode='a',          # 'w' sobre escreve toda vez, 'a' anexa
-    format='%(asctime)s %(levelname)s:%(message)s',
-    level=logging.DEBUG
-)
 
 
 # formata números no estilo US (com vírgulas de milhar e 2 casas decimais)
@@ -70,6 +58,17 @@ import streamlit as st  # já deve estar importado
 # 3) Caminho dos CSVs — busca na subpasta "Data" ao lado do app.py
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DIR = os.path.join(BASE_DIR, "Data")
+
+# garante que o diretório existe
+LOG_FILE = os.path.join(DIR, "debug_commits.log")
+os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
+
+logging.basicConfig(
+    filename=LOG_FILE,
+    filemode='a',          # 'w' sobre escreve toda vez, 'a' anexa
+    format='%(asctime)s %(levelname)s:%(message)s',
+    level=logging.DEBUG
+)
 
 # Salva upside deals comprometidos
 SAVE_FILE = os.path.join(DIR, "committed_ids.json")
