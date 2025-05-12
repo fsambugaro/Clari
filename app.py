@@ -385,7 +385,7 @@ gb.configure_selection(
 grid_opts = gb.build()
 grid_opts["getRowNodeId"] = JsCode(
     "function(data) { return data['Deal Registration ID']; }"
-)()
+)
 # Parâmetros necessários para pré-seleção funcionar
 grid_opts["rowSelection"] = 'multiple'
 grid_opts["rowMultiSelectWithClick"] = True
