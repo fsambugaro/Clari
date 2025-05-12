@@ -430,8 +430,13 @@ for row in current_selected:
             visible_ids.append(did)
 
 # 6.3) Junta com os IDs já salvos (mesmo os que ficaram ocultos pelo filtro)
-prev_ids = st.session_sta
+prev_ids = st.session_state["commit_ids_by_member"][current_member]
 
+hidden_prev = [
+    i for i in prev_ids
+    if i not in _commit_disp["Deal Registration ID"].tolist()
+]
+all_ids = list(dict.fromkeys(hidden_prev + visible_ids))
 
 
 # 16) Dados Brutos e ficha detalhada e ficha detalhada
