@@ -331,7 +331,7 @@ for col, title in extras:
         download_html(fig, title.replace(' ', '_').lower())
 
 
-## 15) Seleção e exibição de Committed Deals por vendedor
+# 15) Seleção e exibição de Committed Deals por vendedor
 st.markdown("---")
 st.header("✅ Upside deals to reach commit")
 
@@ -397,6 +397,13 @@ grid_opts["pre_selected_rows"] = commit_disp[
 ].to_dict("records")
 
 # 4) Renderiza grid de seleção
+# — DEBUG pré-seleção na sidebar —
+st.sidebar.markdown("### 🔧 Debug pré-seleção")
+st.sidebar.write("prev_ids:", prev_ids)
+st.sidebar.write("commit_disp IDs:", commit_disp["Deal Registration ID"].tolist())
+presel = commit_disp[commit_disp["Deal Registration ID"].isin(prev_ids)]
+st.sidebar.write("pre_selected_rows via IDs:", presel["Deal Registration ID"].tolist())
+
 resp = AgGrid(
     commit_disp,
     gridOptions=grid_opts,
