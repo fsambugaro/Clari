@@ -414,8 +414,8 @@ resp = AgGrid(
     update_mode=GridUpdateMode.SELECTION_CHANGED,
     allow_unsafe_jscode=True,
     height=350,
-    key=f"commit_grid_{current_member}",
-    pre_selected_rows=presel.to_dict("records")
+    key=f"commit_grid_{current_member}"
+)("records")
 )
 
 # 5) Normaliza e extrai IDs visíveis) Normaliza e extrai IDs visíveis
