@@ -350,20 +350,17 @@ if "commit_ids_by_member" not in st.session_state:
 
 current_member = sel_member if sel_member != "Todos" else "__ALL__"
 ids = st.session_state["commit_ids_by_member"].setdefault(current_member, [])
-# garante que todos os IDs do JSON sejam strings
 st.session_state["commit_ids_by_member"][current_member] = [str(i) for i in ids]
 
-# 2) DataFrame base: só Upside / Upside-Targeted ainda abertos
+# 2) Dataset de Upside deals abertas
 _commit_disp = df[
     df["Forecast Indicator"].isin(["Upside", "Upside - Targeted"])
     & ~df["Stage"].isin(["Closed - Booked", "07 - Execute to Close", "02 - Prospect"])
 ].copy()
-
-# 2.1) Forçar string nos IDs
 _commit_disp["Deal Registration ID"] = _commit_disp["Deal Registration ID"].astype(str)
-full_df["Deal Registration ID"] = full_df["Deal Registration ID"].astype(str)
+full_df["Deal Registration ID"]   = full_df["Deal Registration ID"].astype(str)
 
-# 2.2) Apenas colunas simples para seleção
+# 2.2) Colunas para seleção
 cols_to_show = [
     "Deal Registration ID",
     "Opportunity",
@@ -373,7 +370,7 @@ cols_to_show = [
 ]
 commit_disp = _commit_disp[cols_to_show].copy()
 
-# 3) Configura o AgGrid para seleção múltipla
+# 3) Configura AgGrid
 gb = GridOptionsBuilder.from_dataframe(commit_disp)
 gb.configure_default_column(cellStyle={"color":"white","backgroundColor":"#000000"})
 gb.configure_column(
@@ -385,7 +382,7 @@ gb.configure_column(
 gb.configure_selection("multiple", use_checkbox=True)
 grid_opts = gb.build()
 
-# 4) Pré-seleciona pelos IDs já salvos
+# 4) Pré-seleção
 grid_opts["getRowNodeId"] = JsCode(
     "function(data) { return data['Deal Registration ID']; }"
 )
@@ -395,7 +392,7 @@ grid_opts["pre_selected_rows"] = commit_disp[
     )
 ].to_dict("records")
 
-# 5) Renderiza a grid de seleção
+# 5) Renderiza grid de seleção
 resp = AgGrid(
     commit_disp,
     gridOptions=grid_opts,
@@ -406,7 +403,7 @@ resp = AgGrid(
     key=f"commit_grid_{current_member}"
 )
 
-# 6) Normaliza resposta e extrai IDs visíveis
+# 6) Normaliza e extrai IDs visíveis
 resp_rows = resp.get("selected_rows", [])
 if isinstance(resp_rows, pd.DataFrame):
     current_selected = resp_rows.to_dict("records")
@@ -423,7 +420,7 @@ visible_ids = [
     if isinstance(row, dict) and row.get("Deal Registration ID") is not None
 ]
 
-# 7) Une com os IDs previamente salvos (mesmo os ocultos pelo filtro)
+# 7) Une com IDs salvos originalmente (mesmo ocultos pelo filtro)
 prev_ids = st.session_state["commit_ids_by_member"][current_member]
 hidden_prev = [
     i for i in prev_ids
@@ -431,19 +428,17 @@ hidden_prev = [
 ]
 all_ids = list(dict.fromkeys(hidden_prev + visible_ids))
 
-# 8) Atualiza o estado e persiste
+# 8) Persiste
 st.session_state["commit_ids_by_member"][current_member] = all_ids
 with open(SAVE_FILE, "w") as f:
     json.dump(st.session_state["commit_ids_by_member"], f)
 
-# 9) Exibe a tabela final com todos os deals selecionados
+# 9) Monta e exibe tabela final
 commit_df = full_df[
     full_df["Deal Registration ID"].isin(all_ids)
 ].copy()
-
 total_asv = commit_df["Total New ASV"].sum()
 st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
-
 st.subheader("🚀 Deals selecionados")
 gb2 = GridOptionsBuilder.from_dataframe(commit_df)
 gb2.configure_default_column(cellStyle={"color":"white","backgroundColor":"#000000"})
@@ -463,7 +458,18 @@ AgGrid(
     key=f"commit_selected_{current_member}"
 )
 
-# (cole isto após o seu bloco #15)
+# — DEBUG sidebar —
+st.sidebar.markdown("### 🔧 Debug Commit Selection")
+st.sidebar.write("current_member:", current_member)
+st.sidebar.write("prev_ids:", prev_ids)
+st.sidebar.write("visible_ids:", visible_ids)
+st.sidebar.write("hidden_prev:", hidden_prev)
+st.sidebar.write("all_ids:", all_ids)
+st.sidebar.write("commit_disp IDs:", commit_disp["Deal Registration ID"].tolist())
+st.sidebar.write("commit_df IDs:", commit_df["Deal Registration ID"].tolist())
+
+
+#16 DEBUG (cole isto após o seu bloco #15)
 if os.path.exists(LOG_FILE):
     with open(LOG_FILE, "r") as f:
         lines = f.readlines()
