@@ -392,39 +392,38 @@ resp = AgGrid(
     height=350,
     key=f"commit_grid_{current_member}"
 )
-
 # 6) Extrai os selecionados atuais (visíveis) e faz a união com os já salvos
+
+# 6.1) Pega o conteúdo bruto e normaliza para lista de dicionários
 resp_rows = resp.get("selected_rows", [])
+
 if isinstance(resp_rows, pd.DataFrame):
     current_selected = resp_rows.to_dict("records")
-else:
+elif isinstance(resp_rows, dict):
+    current_selected = [resp_rows]
+elif isinstance(resp_rows, list):
     current_selected = resp_rows
+else:
+    current_selected = []
 
-# 6.1) Extrai com segurança os IDs das linhas selecionadas
+# 6.2) Extrai com segurança os IDs das linhas selecionadas
 visible_ids = []
 for row in current_selected:
-    try:
-        # se for dict funciona:
-        did = row.get("Deal Registration ID") if isinstance(row, dict) else row["Deal Registration ID"]
+    if isinstance(row, dict):
+        did = row.get("Deal Registration ID")
         if did is not None:
             visible_ids.append(did)
-    except Exception:
-        # ignora linhas que não têm o campo esperado
-        continue
 
-
+# 6.3) Junta com os IDs já salvos (mesmo os que ficaram ocultos pelo filtro)
 prev_ids = st.session_state["commit_ids_by_member"][current_member]
-# mantém também os anteriores que NÃO estão mais visíveis no filtro atual
 hidden_prev = [i for i in prev_ids if i not in commit_disp["Deal Registration ID"].tolist()]
-
-# nova lista é união de hidden_prev + visible_ids
 all_ids = list(dict.fromkeys(hidden_prev + visible_ids))
 
+# 6.4) Atualiza o estado e persiste
 st.session_state["commit_ids_by_member"][current_member] = all_ids
-
-# persiste em disco
 with open(SAVE_FILE, "w") as f:
     json.dump(st.session_state["commit_ids_by_member"], f)
+
 
 # 7) Exibe a tabela final e soma de ASV usando o dataset completo
 commit_df = full_df[
