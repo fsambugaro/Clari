@@ -355,12 +355,12 @@ sel_df["Commit?"] = sel_df["Deal Registration ID"].astype(str).isin(
     st.session_state["commit_ids"]
 )
 
-# (d) Usa o experimental_data_editor para exibir com checkbox automático
-edited = st.experimental_data_editor(
+# (d) Usa o data_editor para exibir com checkbox automático
+edited = st.data_editor(
     sel_df,
-    num_rows="dynamic",       # permite rolagem
+    num_rows="dynamic",
     hide_index=True,
-    use_container_width=True
+    use_container_width=True,
 )
 
 # (e) Recolhe de volta os IDs marcados
