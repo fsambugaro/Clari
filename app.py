@@ -463,6 +463,15 @@ AgGrid(
     key=f"commit_selected_{current_member}"
 )
 
+# (cole isto após o seu bloco #15)
+if os.path.exists(LOG_FILE):
+    with open(LOG_FILE, "r") as f:
+        lines = f.readlines()[-20:]  # pega as últimas 20 linhas
+    st.subheader("📝 Últimas entradas do debug_commits.log")
+    st.code("".join(lines))
+else:
+    st.info("Nenhum log encontrado ainda em " + LOG_FILE)
+
 
 # 16) Dados Brutos e ficha detalhada e ficha detalhada
 st.header('📋 Dados Brutos')
