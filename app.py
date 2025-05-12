@@ -330,13 +330,14 @@ for col, title in extras:
         st.plotly_chart(fig, use_container_width=True)
         download_html(fig, title.replace(' ', '_').lower())
 
+
 # 15) Seleção e exibição de Committed Deals por vendedor
 st.markdown("---")
 st.header("✅ Ajustar Committed Deals")
 
 SAVE_FILE = os.path.join(DIR, "committed_ids_by_member.json")
 
-# 1) Carrega ou inicializa o dicionário em session_state
+# 1) Inicializa ou carrega estado
 if "commit_ids_by_member" not in st.session_state:
     try:
         with open(SAVE_FILE, "r") as f:
@@ -347,58 +348,61 @@ if "commit_ids_by_member" not in st.session_state:
 current_member = sel_member if sel_member != "Todos" else "__ALL__"
 prev_ids = st.session_state.commit_ids_by_member.get(current_member, [])
 
-# 2) Upload / Download
+# 2) Upload / Download de IDs
 st.subheader("📥 Upload / 📤 Download de lista de Commit IDs")
 col1, col2 = st.columns(2)
 with col1:
     uploaded = st.file_uploader("Upload CSV com Deal Registration ID", type="csv", key="upload_commits_15")
     if uploaded:
-        df_up = pd.read_csv(uploaded, dtype=str)
-        ids = df_up["Deal Registration ID"].dropna().astype(str).unique().tolist()
+        df_u = pd.read_csv(uploaded, dtype=str)
+        ids = df_u["Deal Registration ID"].dropna().astype(str).unique().tolist()
         st.session_state.commit_ids_by_member[current_member] = ids
         with open(SAVE_FILE, "w") as f:
             json.dump(st.session_state.commit_ids_by_member, f)
         st.success(f"Importados {len(ids)} IDs para {current_member}.")
         prev_ids = ids
-
 with col2:
     if prev_ids:
         buf = io.StringIO()
         pd.DataFrame({"Deal Registration ID": prev_ids}).to_csv(buf, index=False)
         st.download_button("⬇️ Download lista atual",
-                            data=buf.getvalue(),
-                            file_name=f"commit_ids_{current_member}.csv",
-                            mime="text/csv")
+                           data=buf.getvalue(),
+                           file_name=f"commit_ids_{current_member}.csv",
+                           mime="text/csv")
 
-# 3) Prepara DataFrame filtrado
+# 3) Prepara DataFrame com coluna de seleção
 df = full_df.copy()
+cols = ["Deal Registration ID", "Opportunity", "Total New ASV", "Stage", "Forecast Indicator"]
+df = df[df["Forecast Indicator"].isin(["Upside", "Upside - Targeted"])][cols]
+# Ajusta tipo
 df["Deal Registration ID"] = df["Deal Registration ID"].astype(str)
-df["is_upside"] = df["Forecast Indicator"].isin(["Upside", "Upside - Targeted"])
-filtered = df[df["is_upside"] | df["Deal Registration ID"].isin(prev_ids)]
+# Marca os persistidos
+df["selected"] = df["Deal Registration ID"].isin(prev_ids)
 
-# 4) Usa multiselect para escolher os commits
-options = filtered["Deal Registration ID"].tolist()
-selected = st.multiselect(
-    "✅ Marque os Deal Registration IDs para Committed Deals",
-    options=options,
-    default=prev_ids,
-    format_func=lambda x: f"{x}  –  {filtered.loc[filtered['Deal Registration ID']==x, 'Opportunity'].iloc[0]}"
+# 4) Exibe DataEditor para seleção múltipla
+edited = st.data_editor(
+    df,
+    num_rows="dynamic",
+    column_config={"selected": st.column_config.CheckboxColumn(header="Selecionar")},
+    hide_index=True,
+    key=f"editor_commits_{current_member}"
 )
 
-# 5) Persiste seleção
-st.session_state.commit_ids_by_member[current_member] = selected
+# 5) Extrai seleção e persiste
+sel_ids = edited.loc[edited["selected"], "Deal Registration ID"].tolist()
+st.session_state.commit_ids_by_member[current_member] = sel_ids
 with open(SAVE_FILE, "w") as f:
     json.dump(st.session_state.commit_ids_by_member, f)
 
 # 6) Exibe resultado final
-commit_df = full_df[full_df["Deal Registration ID"].isin(selected)].copy()
-total_asv = commit_df["Total New ASV"].sum()
-st.markdown(f"---\n### 🚀 Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
-st.dataframe(commit_df, use_container_width=True)
+df_final = full_df[full_df["Deal Registration ID"].isin(sel_ids)].copy()
+tot = df_final["Total New ASV"].sum()
+st.markdown(f"---\n### 🚀 Upside deals to reach the commit — Total New ASV: {tot:,.2f}")
+st.dataframe(df_final, use_container_width=True)
 
-csv_bytes = commit_df.to_csv(index=False).encode("utf-8")
+csv_out = df_final.to_csv(index=False).encode("utf-8")
 st.download_button("⬇️ Download Committed Deals (CSV)",
-                   data=csv_bytes,
+                   data=csv_out,
                    file_name=f"committed_deals_{current_member}.csv",
                    mime="text/csv")
 
