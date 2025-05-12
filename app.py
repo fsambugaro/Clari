@@ -456,22 +456,15 @@ st.download_button(
     label='⬇️ Download Committed Deals (CSV)',
     data=csv_committed,
     file_name=f'committed_deals_{current_member}.csv',
-    mime='text/csv'
+    mime='text/csv',
+    key=f'download_commits_{current_member}'
 )
-
-
-# Botão para baixar os committed deals selecionados
-csv_committed = commit_df.to_csv(index=False).encode('utf-8')
-st.download_button(
     label='⬇️ Download Committed Deals (CSV)',
     data=csv_committed,
     file_name=f'committed_deals_{current_member}.csv',
     mime='text/csv'
 )
-
-
-# — DEBUG no sidebar —
-st.sidebar.markdown("### 🔧 Debug Commit Selection")
+ion")
 st.sidebar.write("current_member:", current_member)
 st.sidebar.write("prev_ids:", prev_ids)
 st.sidebar.write("visible_ids:", visible_ids)
