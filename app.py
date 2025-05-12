@@ -360,6 +360,8 @@ with col1:
         ids_list = df_upload["Deal Registration ID"].dropna().unique().tolist()
         st.session_state["commit_ids_by_member"][current_member] = ids_list
         st.success(f"Importados {len(ids_list)} IDs para {current_member}.")
+        # Recarrega o app para aplicar o upload imediatamente
+        st.experimental_rerun()(f"Importados {len(ids_list)} IDs para {current_member}.")
 with col2:
     existing = st.session_state["commit_ids_by_member"].get(current_member, [])
     if existing:
@@ -451,6 +453,7 @@ else:
         mime='text/csv',
         key=f'download_commits_{current_member}'
     )
+
 
 
 #16 DEBUG (cole isto após o seu bloco #15)
