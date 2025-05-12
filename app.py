@@ -340,43 +340,49 @@ for col, title in extras:
 st.markdown("---")
 st.header("✅ Upside deals to reach commit")
 
-# (a) Inicializa a lista de IDs persistida em session_state
+# (a) Inicializa lista de IDs persistida
 if "commit_ids" not in st.session_state:
     st.session_state["commit_ids"] = []
 
-# (b) Filtra apenas os Upside/U-Targeted abertos
+# (b) Cria DataFrame base igual ao “Dados Brutos”, mas só Upside/U-Targeted abertos
 sel_df = df[
     df["Forecast Indicator"].isin(["Upside", "Upside - Targeted"])
     & ~df["Stage"].isin(["Closed - Booked", "07 - Execute to Close", "02 - Prospect"])
 ].copy()
 
-# (c) Cria a coluna booleana de pré-seleção
+# (c) Adiciona coluna booleana “Commit?” para o checkbox
 sel_df["Commit?"] = sel_df["Deal Registration ID"].astype(str).isin(
     st.session_state["commit_ids"]
 )
 
-# (d) Usa o data_editor para exibir com checkbox automático
+# (d) Exibe no data_editor com checkbox na coluna “Commit?”
 edited = st.data_editor(
     sel_df,
-    num_rows="dynamic",
     hide_index=True,
+    column_config={
+        "Commit?": st.column_config.CheckboxColumn(
+            "Commit?", help="Marque para incluir este deal no commit"
+        )
+    },
     use_container_width=True,
 )
 
-# (e) Recolhe de volta os IDs marcados
-chosen = (
+# (e) Extrai os IDs marcados e atualiza session_state
+new_ids = (
     edited.loc[edited["Commit?"], "Deal Registration ID"]
     .astype(str)
     .tolist()
 )
-st.session_state["commit_ids"] = chosen
+st.session_state["commit_ids"] = new_ids
 
-# (f) Monta o DataFrame final a partir do próprio `edited`
+# (f) Monta o DataFrame final A PARTIR DO PRÓPRIO edited (já traz todas as colunas originais)
 commit_df = edited[edited["Commit?"]].drop(columns=["Commit?"])
+
+# (g) Soma de Total New ASV e exibição do título
 total_asv = commit_df["Total New ASV"].sum()
 st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
 
-# (g) Exibe tabela estilizada
+# (h) Exibe a tabela estilizada
 st.dataframe(
     commit_df
       .style
@@ -385,7 +391,7 @@ st.dataframe(
     use_container_width=True,
 )
 
-# (h) Botão de download
+# (i) Botão de download
 csv_buf = commit_df.to_csv(index=False).encode("utf-8")
 st.download_button(
     "⬇️ Download Upside Deals (CSV)",
