@@ -415,7 +415,6 @@ resp = AgGrid(
     allow_unsafe_jscode=True,
     height=350,
     key=f"commit_grid_{current_member}"
-)("records")
 )
 
 # 5) Normaliza e extrai IDs visíveis) Normaliza e extrai IDs visíveis
