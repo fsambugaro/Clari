@@ -371,11 +371,12 @@ chosen = (
 )
 st.session_state["commit_ids"] = chosen
 
-# (f) Monta o DataFrame final e exibe soma + tabela estilizada
-commit_df = sel_df[sel_df["Deal Registration ID"].astype(str).isin(chosen)]
+# (f) Monta o DataFrame final a partir do próprio `edited`
+commit_df = edited[edited["Commit?"]].drop(columns=["Commit?"])
 total_asv = commit_df["Total New ASV"].sum()
 st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
 
+# (g) Exibe tabela estilizada
 st.dataframe(
     commit_df
       .style
@@ -384,7 +385,7 @@ st.dataframe(
     use_container_width=True,
 )
 
-# (g) Botão de download
+# (h) Botão de download
 csv_buf = commit_df.to_csv(index=False).encode("utf-8")
 st.download_button(
     "⬇️ Download Upside Deals (CSV)",
