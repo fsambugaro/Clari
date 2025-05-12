@@ -349,7 +349,7 @@ current_member = sel_member if sel_member != "Todos" else "__ALL__"
 ids = st.session_state["commit_ids_by_member"].setdefault(current_member, [])
 st.session_state["commit_ids_by_member"][current_member] = [str(i) for i in ids]
 
-# 2) Monta o DataFrame de Upside deals abertas (aplica filtros)
+# 2) Monta o DataFrame de Upside deals abertas
 _commit_disp = df[
     df["Forecast Indicator"].isin(["Upside", "Upside - Targeted"])
     & ~df["Stage"].isin(["Closed - Booked", "07 - Execute to Close", "02 - Prospect"])
@@ -364,13 +364,7 @@ cols_to_show = [
     "Stage",
     "Forecast Indicator"
 ]
-
-# 2.1) Inclui também na grade os deals já selecionados (mesmo que não passem no filtro atual)
-prev_ids = st.session_state["commit_ids_by_member"][current_member]
-persist_df = full_df[full_df["Deal Registration ID"].isin(prev_ids)][cols_to_show]
-
-# concatena sem duplicar
-commit_disp = pd.concat([_commit_disp[cols_to_show], persist_df]).drop_duplicates("Deal Registration ID")
+commit_disp = _commit_disp[cols_to_show].copy()
 
 # 3) Configura AgGrid de seleção
 gb = GridOptionsBuilder.from_dataframe(commit_disp)
@@ -388,10 +382,11 @@ grid_opts["getRowNodeId"] = JsCode(
     "function(data) { return data['Deal Registration ID']; }"
 )
 grid_opts["pre_selected_rows"] = commit_disp[
-    commit_disp["Deal Registration ID"].isin(prev_ids)
+    commit_disp["Deal Registration ID"].isin(
+        st.session_state["commit_ids_by_member"][current_member]
+    )
 ].to_dict("records")
 
-# 4) Renderiza grid de seleção
 resp = AgGrid(
     commit_disp,
     gridOptions=grid_opts,
@@ -402,7 +397,7 @@ resp = AgGrid(
     key=f"commit_grid_{current_member}"
 )
 
-# 5) Normaliza e extrai IDs visíveis
+# 4) Normaliza e extrai IDs visíveis
 resp_rows = resp.get("selected_rows", [])
 if isinstance(resp_rows, pd.DataFrame):
     current_selected = resp_rows.to_dict("records")
@@ -419,15 +414,16 @@ visible_ids = [
     if isinstance(row, dict) and row.get("Deal Registration ID") is not None
 ]
 
-# 6) Mantém tudo que já existia e adiciona os novos
+# 5) Mantém tudo que já existia e adiciona os novos
+prev_ids = st.session_state["commit_ids_by_member"][current_member]
 all_ids = list(dict.fromkeys(prev_ids + visible_ids))
 
-# 7) Persiste
+# 6) Persiste
 st.session_state["commit_ids_by_member"][current_member] = all_ids
 with open(SAVE_FILE, "w") as f:
     json.dump(st.session_state["commit_ids_by_member"], f)
 
-# 8) Exibe a tabela final
+# 7) Exibe a tabela final
 commit_df = full_df[full_df["Deal Registration ID"].isin(all_ids)].copy()
 total_asv = commit_df["Total New ASV"].sum()
 st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
@@ -449,16 +445,6 @@ AgGrid(
     height=300,
     key=f"commit_selected_{current_member}"
 )
-
-# Botão de download dos committed deals
-csv_committed = commit_df.to_csv(index=False).encode('utf-8')
-st.download_button(
-    label='⬇️ Download Committed Deals (CSV)',
-    data=csv_committed,
-    file_name=f'committed_deals_{current_member}.csv',
-    mime='text/csv'
-)
-
 
 # Botão para baixar os committed deals selecionados
 csv_committed = commit_df.to_csv(index=False).encode('utf-8')
