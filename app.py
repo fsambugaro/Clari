@@ -414,31 +414,11 @@ resp = AgGrid(
     update_mode=GridUpdateMode.SELECTION_CHANGED,
     allow_unsafe_jscode=True,
     height=350,
-    key=f"commit_grid_{current_member}"
-)
-
-# 5) Normaliza e extrai IDs visíveis
-# — DEBUG pré-seleção na sidebar —
-st.sidebar.markdown("### 🔧 Debug pré-seleção")
-st.sidebar.write("prev_ids:", prev_ids)
-st.sidebar.write("commit_disp IDs:", commit_disp["Deal Registration ID"].tolist())
-presel = commit_disp[commit_disp["Deal Registration ID"].isin(prev_ids)]
-st.sidebar.write("pre_selected_rows via IDs:", presel["Deal Registration ID"].tolist())
-
-resp = AgGrid(
-    commit_disp,
-    gridOptions=grid_opts,
-    theme="streamlit-dark",
-    update_mode=GridUpdateMode.SELECTION_CHANGED,
-    allow_unsafe_jscode=True,
-    height=350,
     key=f"commit_grid_{current_member}",
-    pre_selected_rows=commit_disp[
-        commit_disp["Deal Registration ID"].isin(prev_ids)
-    ].to_dict("records")
+    pre_selected_rows=presel.to_dict("records")
 )
 
-# 5) Normaliza e extrai IDs visíveis
+# 5) Normaliza e extrai IDs visíveis) Normaliza e extrai IDs visíveis
 resp_rows = resp.get("selected_rows", [])
 if isinstance(resp_rows, pd.DataFrame):
     current_selected = resp_rows.to_dict("records")
