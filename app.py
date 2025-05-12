@@ -394,14 +394,28 @@ grid_opts["getRowNodeId"] = JsCode(
 )
 
 # 4) Debug na sidebar
+# define pre_sel aqui para debug
+pre_sel = commit_disp[commit_disp["Deal Registration ID"].isin(prev_ids)]
 st.sidebar.markdown("### 🔧 Debug pré-seleção")
 st.sidebar.write("prev_ids:", prev_ids)
 st.sidebar.write("commit_disp IDs:", commit_disp["Deal Registration ID"].tolist())
+st.sidebar.write("pre_sel IDs:", pre_sel["Deal Registration ID"].tolist())
+# grid_opts pré-seleção (se existir)
 st.sidebar.write("grid_opts['pre_selected_rows']:", grid_opts.get("pre_selected_rows"))
 st.sidebar.write("grid_opts rowSelection:", grid_opts.get("rowSelection"))
-st.sidebar.write("pre_sel IDs:", pre_sel["Deal Registration ID"].tolist())
 
 # 5) Renderiza grid de seleção
+resp = AgGrid(
+    commit_disp,
+    gridOptions=grid_opts,
+    pre_selected_rows=pre_sel.to_dict("records"),
+    theme="streamlit-dark",
+    update_mode=GridUpdateMode.SELECTION_CHANGED,
+    allow_unsafe_jscode=True,
+    height=350,
+    key=f"commit_grid_{current_member}"
+)
+
 resp = AgGrid(
     commit_disp,
     gridOptions=grid_opts,
