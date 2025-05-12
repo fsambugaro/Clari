@@ -8,8 +8,6 @@ import json
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
 import logging
 
-st.write("→ CWD (diretório atual):", os.getcwd())
-st.write("→ Arquivos no root do app:", os.listdir(os.getcwd()))
 
 data_path = os.path.join(os.getcwd(), "Data")
 st.write("→ Arquivos em Data/:", os.listdir(data_path) if os.path.isdir(data_path) else "Pasta Data não existe")
@@ -55,19 +53,36 @@ st.markdown(
     """, unsafe_allow_html=True
 )
 
+
+
+
+
 # 2) Título
 st.title("📊 LATAM Pipeline Dashboard")
 
 import os
 import streamlit as st  # já deve estar importado
 
+
 # 3) Caminho dos CSVs — busca na subpasta "Data" ao lado do app.py
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DIR = os.path.join(BASE_DIR, "Data")
 
+
 # garante que o diretório existe
+# 3.1) Configure o logger
 LOG_FILE = os.path.join(DIR, "debug_commits.log")
-os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
+os.makedirs(DIR, exist_ok=True)
+logging.basicConfig(
+    filename=LOG_FILE,
+    filemode='a',
+    format='%(asctime)s %(levelname)s:%(message)s',
+    level=logging.DEBUG
+)
+
+# 4) Diagnóstico rápido: veja se o log existe
+st.write("Debug log exists at", LOG_FILE, "→", os.path.exists(LOG_FILE))
+
 
 logging.basicConfig(
     filename=LOG_FILE,
