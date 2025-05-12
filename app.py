@@ -7,6 +7,20 @@ import io
 import json
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
 
+import logging
+
+# garante que o diretório existe
+LOG_FILE = os.path.join(DIR, "debug_commits.log")
+os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
+
+logging.basicConfig(
+    filename=LOG_FILE,
+    filemode='a',          # 'w' sobre escreve toda vez, 'a' anexa
+    format='%(asctime)s %(levelname)s:%(message)s',
+    level=logging.DEBUG
+)
+
+
 # formata números no estilo US (com vírgulas de milhar e 2 casas decimais)
 us_format = JsCode(
     "function(params){"
@@ -407,7 +421,9 @@ resp = AgGrid(
     key=f"commit_grid_{current_member}"
 )
 
-# 6) Extrai os selecionados atuais (visíveis) e faz a união com os já salvos
+# 6) DEBUG: grava o conteúdo bruto de resp
+logging.debug(f"resp_rows raw: {resp.get('selected_rows', None)!r}")
+
 # 6.1) Normaliza resposta em lista de dicionários
 resp_rows = resp.get("selected_rows", [])
 if isinstance(resp_rows, pd.DataFrame):
@@ -419,25 +435,26 @@ elif isinstance(resp_rows, list):
 else:
     current_selected = []
 
-# 6.2) Extrai com segurança os IDs das linhas selecionadas (já em str)
-visible_ids = [row.get("Deal Registration ID") 
-               for row in current_selected 
-               if isinstance(row, dict) and row.get("Deal Registration ID")]
+# DEBUG: veja como ficou após normalizar
+logging.debug(f"current_selected: {current_selected!r}")
 
-# 6.3) Junta com os IDs já salvos (mesmo os que ficaram ocultos pelo filtro)
-prev_ids = st.session_state["commit_ids_by_member"][current_member]
-hidden_prev = [
-    i for i in prev_ids
-    if i not in _commit_disp["Deal Registration ID"].tolist()
+# 6.2) Extrai IDs visíveis
+visible_ids = [
+    row.get("Deal Registration ID")
+    for row in current_selected
+    if isinstance(row, dict) and row.get("Deal Registration ID") is not None
 ]
+# DEBUG: IDs selecionados visíveis
+logging.debug(f"visible_ids: {visible_ids!r}")
+
 all_ids = list(dict.fromkeys(hidden_prev + visible_ids))
 
-# 6.4) Atualiza o estado e persiste
+# 7.4) Atualiza o estado e persiste
 st.session_state["commit_ids_by_member"][current_member] = all_ids
 with open(SAVE_FILE, "w") as f:
     json.dump(st.session_state["commit_ids_by_member"], f)
 
-# 7) Exibe a tabela final e soma de ASV usando o dataset completo
+# 8) Exibe a tabela final e soma de ASV usando o dataset completo
 commit_df = full_df[
     full_df["Deal Registration ID"].isin(
         st.session_state["commit_ids_by_member"][current_member]
