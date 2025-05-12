@@ -361,7 +361,7 @@ with col1:
         st.session_state["commit_ids_by_member"][current_member] = ids_list
         st.success(f"Importados {len(ids_list)} IDs para {current_member}.")
         # Recarrega o app para aplicar o upload imediatamente
-        st.experimental_rerun()(f"Importados {len(ids_list)} IDs para {current_member}.")
+        st.experimental_rerun()
 with col2:
     existing = st.session_state["commit_ids_by_member"].get(current_member, [])
     if existing:
