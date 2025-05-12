@@ -331,8 +331,7 @@ for col, title in extras:
         download_html(fig, title.replace(' ', '_').lower())
 
 
-
-# --- Início do bloco 15: Ajustar Committed Deals ---
+# 15 --- Início do bloco 15: Ajustar Committed Deals ---
 st.markdown("---")
 st.header("✅ Ajustar Committed Deals")
 
@@ -367,8 +366,8 @@ with col1:
         with open(SAVE_FILE, "w") as f:
             json.dump(st.session_state.commit_ids_by_member, f)
         st.success(f"Importados {len(ids)} IDs para {current_member}.")
-        # Força novo rerun para reconstruir grid com seleção atualizada
-        raise RerunException(RerunData())
+        # Reatribui prev_ids localmente
+        prev_ids = ids
 
 with col2:
     if prev_ids:
@@ -464,6 +463,8 @@ st.download_button(
     key=f"download_commits_final_{current_member}"
 )
 # --- Fim do bloco 15 ---
+
+
 
 #16 DEBUG (cole isto após o seu bloco #15)
 #if os.path.exists(LOG_FILE):
