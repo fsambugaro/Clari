@@ -374,6 +374,8 @@ commit_disp = commit_disp[cols_to_show]
 
 # 3) Configura AgGrid de seleção
 # pré-seleciona pelos IDs já salvos
+prev_ids = st.session_state["commit_ids_by_member"][current_member]
+
 gb = GridOptionsBuilder.from_dataframe(commit_disp)
 gb.configure_default_column(cellStyle={"color":"white","backgroundColor":"#000000"})
 gb.configure_column(
@@ -382,21 +384,20 @@ gb.configure_column(
     cellStyle={"textAlign":"right","color":"white","backgroundColor":"#000000"},
     cellRenderer=us_format,
 )
-# Configura seleção múltipla e pre-seleção
+# habilita seleção múltipla por checkbox
 gb.configure_selection(
     "multiple",
-    use_checkbox=True
+    use_checkbox=True,
+    pre_selected_rows=commit_disp[
+        commit_disp["Deal Registration ID"].isin(prev_ids)
+    ].to_dict("records")
 )
+
 grid_opts = gb.build()
-# habilita seleção múltipla via API
-grid_opts['rowSelection'] = 'multiple'
-# define pré-seleção manualmente
+# define ID de linha único
 grid_opts["getRowNodeId"] = JsCode(
     "function(data) { return data['Deal Registration ID']; }"
 )
-grid_opts["pre_selected_rows"] = commit_disp[
-    commit_disp["Deal Registration ID"].isin(prev_ids)
-].to_dict("records")
 
 # 4) Renderiza grid de seleção
 # — DEBUG pré-seleção na sidebar —
@@ -414,6 +415,27 @@ resp = AgGrid(
     allow_unsafe_jscode=True,
     height=350,
     key=f"commit_grid_{current_member}"
+)
+
+# 5) Normaliza e extrai IDs visíveis
+# — DEBUG pré-seleção na sidebar —
+st.sidebar.markdown("### 🔧 Debug pré-seleção")
+st.sidebar.write("prev_ids:", prev_ids)
+st.sidebar.write("commit_disp IDs:", commit_disp["Deal Registration ID"].tolist())
+presel = commit_disp[commit_disp["Deal Registration ID"].isin(prev_ids)]
+st.sidebar.write("pre_selected_rows via IDs:", presel["Deal Registration ID"].tolist())
+
+resp = AgGrid(
+    commit_disp,
+    gridOptions=grid_opts,
+    theme="streamlit-dark",
+    update_mode=GridUpdateMode.SELECTION_CHANGED,
+    allow_unsafe_jscode=True,
+    height=350,
+    key=f"commit_grid_{current_member}",
+    pre_selected_rows=commit_disp[
+        commit_disp["Deal Registration ID"].isin(prev_ids)
+    ].to_dict("records")
 )
 
 # 5) Normaliza e extrai IDs visíveis
