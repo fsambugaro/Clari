@@ -388,6 +388,8 @@ gb.configure_selection(
     use_checkbox=True
 )
 grid_opts = gb.build()
+# habilita seleção múltipla via API
+grid_opts['rowSelection'] = 'multiple'
 # define pré-seleção manualmente
 grid_opts["getRowNodeId"] = JsCode(
     "function(data) { return data['Deal Registration ID']; }"
