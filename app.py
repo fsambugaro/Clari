@@ -331,6 +331,9 @@ for col, title in extras:
         download_html(fig, title.replace(' ', '_').lower())
 
 
+
+# --- Início do bloco 15: Ajustar Committed Deals ---
+
 st.markdown("---")
 st.header("✅ Ajustar Committed Deals")
 
@@ -360,12 +363,13 @@ with col1:
     if uploaded is not None:
         df_up = pd.read_csv(uploaded, dtype=str)
         ids = df_up["Deal Registration ID"].dropna().unique().tolist()
+        # Atualiza session_state e arquivo
         st.session_state.commit_ids_by_member[current_member] = ids
-        # salva imediatamente e força rerun
         with open(SAVE_FILE, "w") as f:
             json.dump(st.session_state.commit_ids_by_member, f)
         st.success(f"Importados {len(ids)} IDs para {current_member}.")
-        st.experimental_rerun()
+        # Reatribui prev_ids localmente
+        prev_ids = ids
 
 with col2:
     if prev_ids:
@@ -380,18 +384,20 @@ with col2:
         )
 
 # 3) Se não há nada para mostrar
-df_select = full_df.copy()
-df_select["Deal Registration ID"] = df_select["Deal Registration ID"].astype(str)
-df_select["is_upside"] = df_select["Forecast Indicator"].isin(["Upside","Upside - Targeted"])
+full_df_copy = full_df.copy()
+full_df_copy["Deal Registration ID"] = full_df_copy["Deal Registration ID"].astype(str)
+full_df_copy["is_upside"] = full_df_copy["Forecast Indicator"].isin(["Upside","Upside - Targeted"])
 
-if not prev_ids and not df_select["is_upside"].any():
+if not prev_ids and not full_df_copy["is_upside"].any():
     st.info("Nenhuma lista de Commit IDs e nenhum Upside disponível. Faça upload primeiro.")
     st.stop()
 
 # 4) Monta DataFrame de exibição
-commit_disp = df_select[df_select["is_upside"] | df_select["Deal Registration ID"].isin(prev_ids)]
-columns = ["Deal Registration ID", "Opportunity", "Total New ASV", "Stage", "Forecast Indicator"]
-commit_disp = commit_disp[columns]
+commit_disp = full_df_copy[
+    full_df_copy["is_upside"] | full_df_copy["Deal Registration ID"].isin(prev_ids)
+].copy()
+cols_to_show = ["Deal Registration ID", "Opportunity", "Total New ASV", "Stage", "Forecast Indicator"]
+commit_disp = commit_disp[cols_to_show]
 
 # 5) Configura AgGrid
 gb = GridOptionsBuilder.from_dataframe(commit_disp)
@@ -420,7 +426,7 @@ resp = AgGrid(
 )
 
 # 6) Extrai seleção e persiste
-selected = resp["selected_rows"] or []
+selected = resp.get("selected_rows", []) or []
 sel_ids = [row["Deal Registration ID"] for row in selected if row.get("Deal Registration ID")]
 st.session_state.commit_ids_by_member[current_member] = sel_ids
 with open(SAVE_FILE, "w") as f:
@@ -458,6 +464,8 @@ st.download_button(
     mime="text/csv",
     key=f"download_commits_final_{current_member}"
 )
+# --- Fim do bloco 15 ---
+
 
 #16 DEBUG (cole isto após o seu bloco #15)
 #if os.path.exists(LOG_FILE):
