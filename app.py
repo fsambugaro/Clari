@@ -331,7 +331,7 @@ for col, title in extras:
         download_html(fig, title.replace(' ', '_').lower())
 
 
-# 15) Seleção e exibição de Committed Deals por vendedor
+## 15) Seleção e exibição de Committed Deals por vendedor
 st.markdown("---")
 st.header("✅ Upside deals to reach commit")
 
@@ -372,7 +372,7 @@ commit_disp = full_df[
 # Limita colunas exibidas
 commit_disp = commit_disp[cols_to_show]
 
-# 3")]}) Configura AgGrid de seleção
+# 3) Configura AgGrid de seleção
 # pré-seleciona pelos IDs já salvos
 gb = GridOptionsBuilder.from_dataframe(commit_disp)
 gb.configure_default_column(cellStyle={"color":"white","backgroundColor":"#000000"})
