@@ -375,15 +375,17 @@ gb.configure_column(
     cellStyle={"textAlign":"right","color":"white","backgroundColor":"#000000"},
     cellRenderer=us_format,
 )
-# Seleção múltipla com pré-seleção
-pre_sel = commit_disp[commit_disp["Deal Registration ID"].isin(prev_ids)]
+# 3) Configura seleção múltipla via checkbox
 gb.configure_selection(
     "multiple",
-    use_checkbox=True,
-    pre_selected_rows=pre_sel.to_dict("records")
+    use_checkbox=True
 )
 
+# constrói opções e define ID único para pré-seleção futura
 grid_opts = gb.build()
+grid_opts["getRowNodeId"] = JsCode(
+    "function(data) { return data['Deal Registration ID']; }"
+)()
 # Parâmetros necessários para pré-seleção funcionar
 grid_opts["rowSelection"] = 'multiple'
 grid_opts["rowMultiSelectWithClick"] = True
