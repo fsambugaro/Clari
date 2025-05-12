@@ -349,28 +349,19 @@ current_member = sel_member if sel_member != "Todos" else "__ALL__"
 ids = st.session_state["commit_ids_by_member"].setdefault(current_member, [])
 st.session_state["commit_ids_by_member"][current_member] = [str(i) for i in ids]
 
-# 2) Monta o DataFrame de Upside deals abertas (aplica filtros)
-_commit_disp = df[
-    df["Forecast Indicator"].isin(["Upside", "Upside - Targeted"])
-    & ~df["Stage"].isin(["Closed - Booked", "07 - Execute to Close", "02 - Prospect"])
-].copy()
-_commit_disp["Deal Registration ID"] = _commit_disp["Deal Registration ID"].astype(str)
-full_df["Deal Registration ID"]   = full_df["Deal Registration ID"].astype(str)
+# 2) Monta o DataFrame de seleção incluindo todos os prev_ids e os Upside atuais
+# Flags para identificar Upside
+full_df["Deal Registration ID"] = full_df["Deal Registration ID"].astype(str)
+full_df["is_upside"] = full_df["Forecast Indicator"].isin(["Upside", "Upside - Targeted"])
 
-cols_to_show = [
-    "Deal Registration ID",
-    "Opportunity",
-    "Total New ASV",
-    "Stage",
-    "Forecast Indicator"
-]
-
-# 2.1) Inclui também na grade os deals já selecionados (mesmo que não passem no filtro atual)
 prev_ids = st.session_state["commit_ids_by_member"][current_member]
-persist_df = full_df[full_df["Deal Registration ID"].isin(prev_ids)][cols_to_show]
 
-# concatena sem duplicar
-commit_disp = pd.concat([_commit_disp[cols_to_show], persist_df]).drop_duplicates("Deal Registration ID")
+# Seleciona linhas que são Upside ou já persistidas
+commit_disp = full_df[
+    full_df["is_upside"] | full_df["Deal Registration ID"].isin(prev_ids)
+].copy()
+# Limita colunas exibidas
+commit_disp = commit_disp[cols_to_show]
 
 # 3) Configura AgGrid de seleção
 # pré-seleciona pelos IDs já salvos
