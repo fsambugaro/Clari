@@ -340,37 +340,30 @@ for col, title in extras:
 st.markdown("---")
 st.header("✅ Upside deals to reach commit")
 
-# (a) Inicializa a lista persistente de IDs
+# (a) Inicializa a lista de IDs persistida em session_state
 if "commit_ids" not in st.session_state:
     st.session_state["commit_ids"] = []
 
-# (b) Filtra só os deals Upside/U-Targeted abertos
+# (b) Filtra apenas os Upside/U-Targeted abertos
 sel_df = df[
     df["Forecast Indicator"].isin(["Upside", "Upside - Targeted"])
     & ~df["Stage"].isin(["Closed - Booked", "07 - Execute to Close", "02 - Prospect"])
 ].copy()
 
-# (c) Cria a coluna booleana e garante dtype=bool
+# (c) Cria a coluna booleana de pré-seleção
 sel_df["Commit?"] = sel_df["Deal Registration ID"].astype(str).isin(
     st.session_state["commit_ids"]
 )
-sel_df["Commit?"] = sel_df["Commit?"].astype(bool)
 
-# (d) Exibe no data_editor COM checkbox column
-edited = st.data_editor(
+# (d) Usa o experimental_data_editor para exibir com checkbox automático
+edited = st.experimental_data_editor(
     sel_df,
-    column_config={
-        "Commit?": st.column_config.CheckboxColumn(
-            "Commit?",
-            help="Marque para incluir este deal no commit",
-            editable=True,
-        )
-    },
+    num_rows="dynamic",       # permite rolagem
     hide_index=True,
-    use_container_width=True,
+    use_container_width=True
 )
 
-# (e) Recolhe IDs marcados e atualiza a sessão
+# (e) Recolhe de volta os IDs marcados
 chosen = (
     edited.loc[edited["Commit?"], "Deal Registration ID"]
     .astype(str)
@@ -378,16 +371,16 @@ chosen = (
 )
 st.session_state["commit_ids"] = chosen
 
-# (f) Monta e exibe a tabela final dos selecionados
+# (f) Monta o DataFrame final e exibe soma + tabela estilizada
 commit_df = sel_df[sel_df["Deal Registration ID"].astype(str).isin(chosen)]
 total_asv = commit_df["Total New ASV"].sum()
 st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
 
 st.dataframe(
     commit_df
-    .style
-    .format({"Total New ASV": "${:,.2f}"})
-    .set_properties(subset=["Total New ASV"], **{"text-align": "right"}),
+      .style
+      .format({"Total New ASV": "${:,.2f}"})
+      .set_properties(subset=["Total New ASV"], **{"text-align": "right"}),
     use_container_width=True,
 )
 
