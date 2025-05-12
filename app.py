@@ -365,13 +365,13 @@ with col1:
         with open(SAVE_FILE, "w") as f:
             json.dump(st.session_state.commit_ids_by_member, f)
         st.success(f"Importados {len(ids)} IDs para {current_member}.")
-        # Reatribui prev_ids e forçar rerun
+        # Atualiza prev_ids local e tenta rerun automaticamente
         prev_ids = ids
-        try:
-            from streamlit.runtime.scriptrunner import RerunException
-            raise RerunException()
-        except ImportError:
-            pass
+        # Se possível, chame experimental_rerun
+        if hasattr(st, "experimental_rerun"):
+            st.experimental_rerun()
+        # Caso contrário, instrua o usuário a recarregar
+        st.info("Por favor, recarregue a página para atualizar a seleção.")
 
 with col2:
     if prev_ids:
@@ -467,6 +467,7 @@ st.download_button(
     key=f"download_commits_final_{current_member}"
 )
 # --- Fim do bloco 15 ---
+
 
 
 
