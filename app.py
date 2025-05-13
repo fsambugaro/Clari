@@ -72,49 +72,35 @@ def list_csv_files():
 
 # 5) Carrega e sanitiza dados
 def parse_number(val):
-    """
-    Converte strings com formatos mistos (US/BR) em float,
-    mas corrige qualquer caso X.000 ou X,000 para X.
-    Depois aplica agrupamento US/EU e decimal normal.
-    """
     s = str(val).strip()
     if not s or s.lower() == 'nan':
         return np.nan
+    # remove espaços e símbolo $
+    s_clean = s.replace(' ', '').replace('$', '')
 
-    # 1) só dígitos, ponto e vírgula
-    s_clean = re.sub(r'[^\d\.,]', '', s)
-
-    # 2) caso geral: X.000 ou X,000 → era só X
-    if re.fullmatch(r'\d+[\.,]000', s_clean):
-        return float(s_clean.split(s_clean[-4])[0])
-
-    # 3) agrupamento US tipo "1,234,567.89"
-    if re.fullmatch(r'\d{1,3}(?:,\d{3})*(?:\.\d+)?', s_clean):
+    # 1) US completo: 1,234 or 1,234.56 ou 12,345,678.90
+    if re.fullmatch(r'\d{1,3}(?:,\d{3})+(?:\.\d+)?', s_clean):
         return float(s_clean.replace(',', ''))
 
-    # 4) agrupamento EU tipo "1.234.567,89"
-    if re.fullmatch(r'\d{1,3}(?:\.\d{3})*(?:,\d+)?', s_clean):
-        no_dot = s_clean.replace('.', '')
-        return float(no_dot.replace(',', '.'))
+    # 2) EU completo: 1.234 ou 1.234,56 ou 12.345.678,90
+    if re.fullmatch(r'\d{1,3}(?:\.\d{3})+(?:,\d+)?', s_clean):
+        return float(s_clean.replace('.', '').replace(',', '.'))
 
-    # 5) separador decimal ambíguo: último ponto ou vírgula antes de 1-2 dígitos
+    # 3) decimal via último separador
     m = re.search(r'([.,])(?=\d{1,2}$)', s_clean)
     if m:
         sep = m.group(1)
-        int_p, dec_p = s_clean.rsplit(sep, 1)
-        i = re.sub(r'[^\d]', '', int_p)
-        d = re.sub(r'[^\d]', '', dec_p)
+        int_part, dec_part = s_clean.rsplit(sep, 1)
+        int_digits = re.sub(r'[^\d]', '', int_part)
+        dec_digits = re.sub(r'[^\d]', '', dec_part)
         try:
-            return float(i) + float(f"0.{d}")
+            return float(int_digits) + float(f"0.{dec_digits}")
         except:
             return np.nan
 
-    # 6) se nada mais, junta todos dígitos
-    all_d = re.sub(r'[^\d]', '', s_clean)
-    try:
-        return float(all_d)
-    except:
-        return np.nan
+    # 4) fallback: todos dígitos
+    digits = re.sub(r'[^\d]', '', s_clean)
+    return float(digits) if digits else np.nan
 
 
 
