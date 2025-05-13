@@ -72,33 +72,39 @@ def list_csv_files():
 
 # 5) Carrega e sanitiza dados
 def parse_number(val):
+    """
+    Converte strings com formatos mistos (US/BR) em float.
+    Identifica o separador decimal como o ÚLTIMO '.' ou ',' antes de 1-2 dígitos finais.
+    """
     s = str(val).strip()
-    if s == '' or s.lower() == 'nan':
+    # vazio ou nan
+    if not s or s.lower() == 'nan':
         return np.nan
 
-    # ================================
-    # 1) Captura o caso "54.000,00" → era só "54"
-    #    strings do tipo "<x>.000,00" onde <x> tem <= 2 dígitos
-    #    e termina em ",00" vamos reduzir para "<x>"
-    m = re.match(r'^(\d{1,2})\.000,00$', s)
+    # retira símbolos e espaços, mas preserva . e ,
+    s_clean = re.sub(r'[^\d\.,]', '', s)
+
+    # busca o separador decimal: último '.' ou ',' que venha seguido de 1-2 dígitos até o fim
+    m = re.search(r'([.,])(?=\d{1,2}$)', s_clean)
     if m:
-        return float(m.group(1))
-
-    # 2) remove tudo que não seja dígito, ponto ou vírgula
-    s = re.sub(r'[^\d\.,]', '', s)
-
-    # 3) os demais casos continuam iguais:
-    #    se tiver ponto E vírgula: formato europeu
-    if '.' in s and ',' in s:
-        s = s.replace('.', '').replace(',', '.')
-    #    se só tiver vírgula: decimal brasileiro
-    elif ',' in s:
-        s = s.replace(',', '.')
-    #    senão assume decimal americano
-    try:
-        return float(s)
-    except:
-        return np.nan
+        sep = m.group(1)
+        int_part, dec_part = s_clean.rsplit(sep, 1)
+        # limpa milhar na parte inteira
+        int_digits = re.sub(r'[^\d]', '', int_part)
+        dec_digits = re.sub(r'[^\d]', '', dec_part)
+        if not int_digits:
+            int_digits = '0'
+        try:
+            return float(int_digits) + float(f"0.{dec_digits}")
+        except:
+            return np.nan
+    else:
+        # sem decimal claro: junta todos dígitos
+        all_digits = re.sub(r'[^\d]', '', s_clean)
+        try:
+            return float(all_digits)
+        except:
+            return np.nan
 
 
 
