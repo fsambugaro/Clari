@@ -4,7 +4,18 @@ import numpy as np
 import plotly.express as px
 import os
 import io
+import json
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
+
+# formata números no estilo US (com vírgulas de milhar e 2 casas decimais)
+us_format = JsCode(
+    "function(params){"
+    "  return params.value!=null"
+    "    ? params.value.toLocaleString('en-US',"
+    "      {minimumFractionDigits:2,maximumFractionDigits:2})"
+    "    : '';"
+    "}"
+)
 
 # 1) Configurações iniciais
 st.set_page_config(page_title="Dashboard Pipeline LATAM", layout="wide")
@@ -39,8 +50,23 @@ st.markdown(
 # 2) Título
 st.title("📊 LATAM Pipeline Dashboard")
 
-# 3) Caminho dos CSVs) Caminho dos CSVs
-DIR = os.getcwd()
+import os
+import streamlit as st  # já deve estar importado
+
+# 3) Caminho dos CSVs — busca na subpasta "Data" ao lado do app.py
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DIR = os.path.join(BASE_DIR, "Data")
+
+# Salva upside deals comprometidos
+SAVE_FILE = os.path.join(DIR, "committed_ids.json")
+
+
+# Se a pasta não existir, interrompe com mensagem amigável
+if not os.path.isdir(DIR):
+    st.error(f"🚨 Pasta de dados não encontrada: {DIR}")
+    st.stop()
+
+
 
 # 4) Lista de CSVs disponíveis
 @st.cache_data
@@ -85,6 +111,24 @@ if not file:
 
 df = load_data(file)
 
+# carrega a lista de commits já registrados
+if 'commit_ids' not in st.session_state:
+    try:
+        with open(SAVE_FILE, "r") as f:
+            st.session_state['commit_ids'] = json.load(f)
+    except FileNotFoundError:
+        st.session_state['commit_ids'] = []
+# remove quem deixou de ser Upside (passou a Forecast)
+valid_ids = [
+    drid for drid in st.session_state['commit_ids']
+    if not (
+        (df['Deal Registration ID'] == drid) &
+        (df['Forecast Indicator'] == 'Forecast')
+    ).any()
+]
+st.session_state['commit_ids'] = valid_ids
+
+
 # 7) Filtros básicos
 st.sidebar.header('🔍 Filtros')
 # Sales Team Member
@@ -103,24 +147,72 @@ if sel_stages:
 # Region: Brazil / Hispanic
 regions = ['Todos', 'Brazil', 'Hispanic']
 sel_region = st.sidebar.selectbox('Region', regions)
-if sel_region != 'Todos':
+if sel_region != 'Todos' and 'Sub Territory' in df.columns:
     df = df[df['Sub Territory'].astype(str).str.contains(sel_region, case=False, na=False)]
 
 
-
 # 9) Filtros adicionais personalizados
-# --- Converter dias em número, evitar erro de bins
+st.sidebar.header('🔧 Filtros adicionais')
+
+# --- 9.1) Fiscal Quarter
+if 'Fiscal Quarter' in df.columns:
+    sel_fq = st.sidebar.selectbox(
+        'Fiscal Quarter',
+        ['Todos'] + sorted(df['Fiscal Quarter'].dropna().unique())
+    )
+    if sel_fq != 'Todos':
+        df = df[df['Fiscal Quarter'] == sel_fq]
+
+# ←── 9.2) Forecast Indicator (cole exatamente este bloco) ──→
+if 'Forecast Indicator' in df.columns:
+    options_fc = sorted(df['Forecast Indicator'].dropna().unique())
+    sel_fc = st.sidebar.multiselect(
+        'Forecast Indicator',
+        options_fc,
+        default=options_fc
+    )
+    if sel_fc:
+        df = df[df['Forecast Indicator'].isin(sel_fc)]
+# ←─────────────────────────────────────────────────────────→
+
+# --- 9.3) Deal Registration ID
+if 'Deal Registration ID' in df.columns:
+    sel_drid = st.sidebar.selectbox(
+        'Deal Registration ID',
+        ['Todos'] + sorted(df['Deal Registration ID'].dropna().unique()),
+        key='filter_deal_registration_id'
+    )
+
+    if sel_drid != 'Todos':
+        df = df[df['Deal Registration ID'] == sel_drid]
+
+# --- 9.4) Dias desde Next Steps
+
 if 'Days Since Next Steps Modified' in df.columns:
+    labels = ['<=7 dias', '8-14 dias', '15-30 dias', '>30 dias']
+    # 1) Garante float e preenche nulos com 0
     df['Days Since Next Steps Modified'] = pd.to_numeric(
         df['Days Since Next Steps Modified'], errors='coerce'
+    ).fillna(0)
+    # 2) Agrupa em bins, incluindo o menor valor
+    df['DaysGroup'] = pd.cut(
+        df['Days Since Next Steps Modified'],
+        bins=[0,7,14,30,float('inf')],
+        labels=labels,
+        include_lowest=True
     )
-st.sidebar.header('🔧 Filtros adicionais')
-if 'Fiscal Quarter' in df.columns:
-    sel_fq = st.sidebar.selectbox('Fiscal Quarter', ['Todos'] + sorted(df['Fiscal Quarter'].dropna().unique()))
-    if sel_fq != 'Todos': df = df[df['Fiscal Quarter'] == sel_fq]
-if 'Forecast Indicator' in df.columns:
-    sel_fc = st.sidebar.selectbox('Forecast Indicator', ['Todos'] + sorted(df['Forecast Indicator'].dropna().unique()))
-    if sel_fc != 'Todos': df = df[df['Forecast Indicator'] == sel_fc]
+    sel_dg = st.sidebar.selectbox(
+        'Dias desde Next Steps',
+        ['Todos'] + labels,
+        key='filter_days_since_next_steps'
+    )
+    if sel_dg != 'Todos':
+        df = df[df['DaysGroup'] == sel_dg]
+
+# ... siga com os demais filtros abaixo ...
+
+
+
 if 'Deal Registration ID' in df.columns:
     sel_drid = st.sidebar.selectbox('Deal Registration ID', ['Todos'] + sorted(df['Deal Registration ID'].dropna().unique()))
     if sel_drid != 'Todos': df = df[df['Deal Registration ID'] == sel_drid]
@@ -165,7 +257,8 @@ if sel_member != 'Todos': applied_filters.append(f"Sales Team Member: {sel_membe
 if sel_region != 'Todos': applied_filters.append(f"Region: {sel_region}")
 # Filtros adicionais personalizados
 if 'sel_fq' in locals() and sel_fq != 'Todos': applied_filters.append(f"Fiscal Quarter: {sel_fq}")
-if 'sel_fc' in locals() and sel_fc != 'Todos': applied_filters.append(f"Forecast Indicator: {sel_fc}")
+if 'sel_fc' in locals() and sel_fc:
+    applied_filters.append(f"Forecast Indicator: {', '.join(sel_fc)}")
 if 'sel_drid' in locals() and sel_drid != 'Todos': applied_filters.append(f"Deal Registration ID: {sel_drid}")
 if 'sel_dg' in locals() and sel_dg != 'Todos': applied_filters.append(f"Dias desde Next Steps: {sel_dg}")
 if 'sel_lpt' in locals() and sel_lpt != 'Todos': applied_filters.append(f"Licensing Program Type: {sel_lpt}")
@@ -254,7 +347,91 @@ for col, title in extras:
         st.plotly_chart(fig, use_container_width=True)
         download_html(fig, title.replace(' ', '_').lower())
 
-# 15) Dados Brutos e ficha detalhada e ficha detalhada
+
+# 15) Seleção e exibição de Committed Deals
+st.markdown('---')
+st.header('✅ Upside deals to reach commit')
+
+# 1) DataFrame base só com os Upside deals ainda abertos
+commit_disp = df[
+    (df.get('Forecast Indicator','') == 'Upside') &
+    (~df['Stage'].isin(['Closed - Booked', '07 - Execute to Close', '02 - Prospect']))
+][[
+    'Deal Registration ID',
+    'Opportunity',
+    'Sales Team Member',
+    'Stage',
+    'Close Date',
+    'Total New ASV',
+    'Next Steps'
+]].copy()
+
+commit_disp['Next Steps'] = commit_disp['Next Steps'].astype(str).str.slice(0,50)
+
+# 2) Exibe AgGrid para selecionar múltiplos Upside deals
+gb = GridOptionsBuilder.from_dataframe(commit_disp)
+gb.configure_default_column(cellStyle={'color':'white','backgroundColor':'#000000'})
+gb.configure_column(
+    'Total New ASV',
+    type=['numericColumn','numberColumnFilter'],
+    cellStyle={'textAlign':'right','color':'white','backgroundColor':'#000000'},
+    cellRenderer=us_format
+)
+gb.configure_selection(selection_mode='multiple', use_checkbox=True)
+resp = AgGrid(
+    commit_disp,
+    gridOptions=gb.build(),
+    theme='streamlit-dark',
+    update_mode=GridUpdateMode.SELECTION_CHANGED,
+    allow_unsafe_jscode=True,
+    height=300,
+    key='upside_deals_grid'
+)
+
+# 3) Monta o DataFrame dos selecionados
+raw = resp['selected_rows']
+if isinstance(raw, pd.DataFrame):
+    sel = raw.to_dict('records')
+else:
+    sel = raw or []
+
+commit_df = pd.DataFrame(sel, columns=commit_disp.columns)
+
+# 3.1) Atualiza a lista persistida de commit_ids
+for row in sel:
+    drid = row['Deal Registration ID']
+    if drid not in st.session_state['commit_ids']:
+        st.session_state['commit_ids'].append(drid)
+
+# 3.2) Persiste a lista em disco
+with open(SAVE_FILE, "w") as f:
+    json.dump(st.session_state['commit_ids'], f)
+
+# 4) Soma de Total New ASV
+total_asv = commit_df['Total New ASV'].sum()
+
+# 5) Título com soma dinâmica
+st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
+
+# 6) Exibe tabela estilizada e botão de download
+st.dataframe(
+    commit_df
+      .style
+      .format({'Total New ASV':'${:,.2f}'})
+      .set_properties(subset=['Total New ASV'], **{'text-align':'right'}),
+    use_container_width=True
+)
+csv_upside = commit_df.to_csv(index=False).encode('utf-8')
+st.download_button(
+    '⬇️ Download Upside Deals (CSV)',
+    data=csv_upside,
+    file_name='upside_deals.csv',
+    mime='text/csv',
+    key='download_upside_deals'
+)
+
+
+# 16) Dados Brutos e ficha detalhada e ficha detalhada
 st.header('📋 Dados Brutos')
 disp = df.copy()
 gb = GridOptionsBuilder.from_dataframe(disp)
@@ -276,6 +453,14 @@ grid_resp = AgGrid(
     update_mode=GridUpdateMode.SELECTION_CHANGED,
     allow_unsafe_jscode=True,
     height=500
+)
+# Download displayed raw data (filtered)
+csv_disp = disp.to_csv(index=False).encode('utf-8')
+st.download_button(
+    '⬇️ Download Displayed Raw Data (CSV)',
+    data=csv_disp,
+    file_name='displayed_raw_data.csv',
+    mime='text/csv'
 )
 sel = grid_resp['selected_rows']
 if isinstance(sel, pd.DataFrame):
@@ -303,3 +488,5 @@ if sel_list:
         st.markdown('<hr/>',unsafe_allow_html=True)
         st.markdown("<span style='color:#FFD700'><strong>Forecast Notes:</strong></span>",unsafe_allow_html=True)
         st.write(rec.get('Forecast Notes',''))
+
+
