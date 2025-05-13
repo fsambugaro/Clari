@@ -72,38 +72,47 @@ def list_csv_files():
 
 # 5) Carrega e sanitiza dados
 def parse_number(val):
+    """
+    Converte strings com formatos mistos (US/BR) em float,
+    mas corrige qualquer caso X.000 ou X,000 para X.
+    Depois aplica agrupamento US/EU e decimal normal.
+    """
     s = str(val).strip()
     if not s or s.lower() == 'nan':
         return np.nan
 
-    # mantém só dígitos, ponto e vírgula
+    # 1) só dígitos, ponto e vírgula
     s_clean = re.sub(r'[^\d\.,]', '', s)
 
-    # tenta achar o separador decimal: último '.' ou ',' antes de 1-2 dígitos finais
+    # 2) caso geral: X.000 ou X,000 → era só X
+    if re.fullmatch(r'\d+[\.,]000', s_clean):
+        return float(s_clean.split(s_clean[-4])[0])
+
+    # 3) agrupamento US tipo "1,234,567.89"
+    if re.fullmatch(r'\d{1,3}(?:,\d{3})*(?:\.\d+)?', s_clean):
+        return float(s_clean.replace(',', ''))
+
+    # 4) agrupamento EU tipo "1.234.567,89"
+    if re.fullmatch(r'\d{1,3}(?:\.\d{3})*(?:,\d+)?', s_clean):
+        no_dot = s_clean.replace('.', '')
+        return float(no_dot.replace(',', '.'))
+
+    # 5) separador decimal ambíguo: último ponto ou vírgula antes de 1-2 dígitos
     m = re.search(r'([.,])(?=\d{1,2}$)', s_clean)
     if m:
         sep = m.group(1)
-        int_part, dec_part = s_clean.rsplit(sep, 1)
-        # extrai só dígitos de cada parte
-        int_digits = re.sub(r'[^\d]', '', int_part)
-        dec_digits = re.sub(r'[^\d]', '', dec_part)
-
-        # ===== Caso especial: "<x>.000,00" virou int_digits="x0000" e dec_digits="00" =====
-        # Se todos os decimais forem zeros, e a parte inteira terminar em "000",
-        # provavelmente era só um grouping errado: dividimos por 1 000.
-        if dec_digits.strip('0') == '' and int_digits.endswith('000') and len(int_digits) > 3:
-            return float(int(int_digits) // 1000)
-
-        # caso normal: recombina inteiro + decimal
+        int_p, dec_p = s_clean.rsplit(sep, 1)
+        i = re.sub(r'[^\d]', '', int_p)
+        d = re.sub(r'[^\d]', '', dec_p)
         try:
-            return float(int_digits) + float(f"0.{dec_digits}")
+            return float(i) + float(f"0.{d}")
         except:
             return np.nan
 
-    # se não achou separador decimal, trata tudo como inteiro
-    all_digits = re.sub(r'[^\d]', '', s_clean)
+    # 6) se nada mais, junta todos dígitos
+    all_d = re.sub(r'[^\d]', '', s_clean)
     try:
-        return float(all_digits)
+        return float(all_d)
     except:
         return np.nan
 
