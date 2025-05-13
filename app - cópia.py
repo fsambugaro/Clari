@@ -71,9 +71,6 @@ def list_csv_files():
 # 5) Carrega e sanitiza dados
 def load_data(path):
     df = pd.read_csv(os.path.join(DIR, path))
-    # 0) Extrai o tipo do CSV (sem extensão) e define o arquivo de commits
-
-
     df.columns = df.columns.str.strip()
     df['Opportunity'] = df.get('Opportunity', df.get('Opportunity ID', ''))
     df['Sales Team Member'] = df.get('Sales Team Member', df.get('Owner', '')).astype(str).str.strip()
@@ -108,21 +105,6 @@ if not file:
     st.stop()
 
 df = load_data(file)
-
-# Deriva o tipo do CSV e define um commit_file específico
-csv_type    = os.path.splitext(file)[0]  
-commit_file = os.path.join(BASE_DIR, "Data", f"committed_deals_{csv_type}.csv")
-
-# limpa estado se trocou de CSV
-if 'current_csv_type' not in st.session_state:
-    st.session_state.current_csv_type = csv_type
-else:
-    if st.session_state.current_csv_type != csv_type:
-        st.session_state.current_csv_type = csv_type
-        st.session_state.upside_grid_counter = 0
-        if 'committed_deals' in st.session_state:
-            del st.session_state['committed_deals']
-
 
 # 7) Filtros básicos
 st.sidebar.header('🔍 Filtros')
@@ -342,18 +324,16 @@ for col, title in extras:
         st.plotly_chart(fig, use_container_width=True)
         download_html(fig, title.replace(' ', '_').lower())
 
+# 15) Seleção e exibição de Committed Deals (sem session_state)
+# ──────────────────────────────────────────────────────
 
-# 15) Seleção e exibição de Committed Deals
-st.markdown('---')
-st.header(f'✅ Upside deals to reach commit — {csv_type}')
+import pandas as pd  # já no topo do arquivo
 
-# 1) DataFrame base só com os Upside deals ainda abertos
+# 15.0) DataFrame base de Upside deals com todas as colunas pedidas
 commit_disp = df[
-    df['Forecast Indicator'].fillna('').isin(['Upside', 'Upside - Targeted']) &
+    df['Forecast Indicator'].fillna('').isin(['Upside','Upside - Targeted']) &
     (~df['Stage'].isin([
-        'Closed - Booked',
-        '07 - Execute to Close',
-        '02 - Prospect'
+        'Closed - Booked','07 - Execute to Close','02 - Prospect'
     ]))
 ][[
     'Deal Registration ID',
@@ -366,22 +346,10 @@ commit_disp = df[
 ]].copy()
 commit_disp['Next Steps'] = commit_disp['Next Steps'].astype(str).str.slice(0,50)
 
-# 2) Inicializa commits salvos em sessão (com as colunas de commit_disp)
-if 'committed_deals' not in st.session_state:
-    if os.path.exists(commit_file):
-        st.session_state.committed_deals = pd.read_csv(commit_file)
-    else:
-        st.session_state.committed_deals = pd.DataFrame(columns=commit_disp.columns)
+st.markdown('---')
+st.header('✅ Upside deals to reach commit')
 
-# 3) Contador para resetar só o grid de Upside
-if 'upside_grid_counter' not in st.session_state:
-    st.session_state.upside_grid_counter = 0
-
-# 4) Botão que limpa apenas a seleção de Upside Deals
-if st.button("✔️ Limpar seleção de Upside Deals"):
-    st.session_state.upside_grid_counter += 1
-
-# 5) Exibe AgGrid para seleção de Upside Deals
+# 15.1) Exibe AgGrid para seleção múltipla
 gb = GridOptionsBuilder.from_dataframe(commit_disp)
 gb.configure_default_column(cellStyle={'color':'white','backgroundColor':'#000000'})
 gb.configure_column(
@@ -390,9 +358,8 @@ gb.configure_column(
     cellStyle={'textAlign':'right','color':'white','backgroundColor':'#000000'},
     cellRenderer=us_format
 )
-gb.configure_selection(selection_mode='multiple', use_checkbox=True)
+gb.configure_selection('multiple', use_checkbox=True)
 
-grid_key = f"upside_deals_grid_{st.session_state.upside_grid_counter}"
 resp = AgGrid(
     commit_disp,
     gridOptions=gb.build(),
@@ -400,70 +367,43 @@ resp = AgGrid(
     update_mode=GridUpdateMode.SELECTION_CHANGED,
     allow_unsafe_jscode=True,
     height=300,
-    key=grid_key
+    key='upside_deals_grid'
 )
 
-# 6) Monta commit_df a partir da seleção
-raw = resp.get('selected_rows')
+# 15.2) Monta o DataFrame dos selecionados de forma segura
+raw = resp['selected_rows']
 if isinstance(raw, pd.DataFrame):
     sel = raw.to_dict('records')
-elif isinstance(raw, list):
-    sel = raw
 else:
-    sel = []
+    sel = raw or []
+
 commit_df = pd.DataFrame(sel, columns=commit_disp.columns)
 
-# 7) Edição e merge incremental
-if not commit_df.empty:
-    st.markdown('---')
-    st.subheader('✏️ Edite os Committed Deals antes de confirmar')
+# 15.3) Soma dinâmica — só se a coluna existir
+if not commit_df.empty and 'Total New ASV' in commit_df.columns:
+    total_asv = commit_df['Total New ASV'].sum()
+else:
+    total_asv = 0.0
 
-    # Editor nativo para ajustar ou remover linhas
-    edited_df = st.data_editor(
-        commit_df,
-        num_rows="dynamic",
-        use_container_width=True
-    )
+st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
 
-    # 7.1) Merge sem perder itens antigos
-    existing = st.session_state.committed_deals
-    combined = pd.concat([existing, edited_df], ignore_index=True)
-    combined = combined.drop_duplicates(
-        subset=['Deal Registration ID'],
-        keep='first'
-    )
-    st.session_state.committed_deals = combined
-
-    # 7.2) Persiste no CSV correto
-    combined.to_csv(commit_file, index=False)
-
-# 8) Editor in-place dos Committed Deals já persistidos
-st.markdown('---')
-st.subheader('✏️ Editar Committed Deals (altere ou exclua linhas)')
-
-edited_commits = st.data_editor(
-    st.session_state.committed_deals,
-    num_rows="dynamic",
+# 15.4) Exibe tabela estilizada de Committed Deals
+st.dataframe(
+    commit_df
+      .style
+      .format({'Total New ASV':'${:,.2f}'})
+      .set_properties(subset=['Total New ASV'], **{'text-align':'right'}),
     use_container_width=True
 )
 
-# Se houve alteração, atualiza e regrava
-if not edited_commits.equals(st.session_state.committed_deals):
-    st.session_state.committed_deals = edited_commits.copy()
-    st.session_state.committed_deals.to_csv(commit_file, index=False)
-
-# 9) Recalcula o Total New ASV após edição/exclusão
-total_commits = st.session_state.committed_deals['Total New ASV'].sum()
-st.header(f"Committed Deals — Total New ASV: {total_commits:,.2f}")
-
-# 10) Botão de download da versão editada
-csv_commits = st.session_state.committed_deals.to_csv(index=False).encode('utf-8')
+# 15.5) Botão de download
+csv_upside = commit_df.to_csv(index=False).encode('utf-8')
 st.download_button(
-    '⬇️ Download Committed Deals (CSV)',
-    data=csv_commits,
-    file_name=f'committed_deals_{csv_type}.csv',
+    '⬇️ Download Upside Deals (CSV)',
+    data=csv_upside,
+    file_name='upside_deals.csv',
     mime='text/csv',
-    key='download_committed_deals'
+    key='download_upside_deals'
 )
 
 
