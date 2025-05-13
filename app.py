@@ -72,39 +72,41 @@ def list_csv_files():
 
 # 5) Carrega e sanitiza dados
 def parse_number(val):
-    """
-    Converte strings com formatos mistos (US/BR) em float.
-    Identifica o separador decimal como o ÚLTIMO '.' ou ',' antes de 1-2 dígitos finais.
-    """
     s = str(val).strip()
-    # vazio ou nan
     if not s or s.lower() == 'nan':
         return np.nan
 
-    # retira símbolos e espaços, mas preserva . e ,
+    # mantém só dígitos, ponto e vírgula
     s_clean = re.sub(r'[^\d\.,]', '', s)
 
-    # busca o separador decimal: último '.' ou ',' que venha seguido de 1-2 dígitos até o fim
+    # tenta achar o separador decimal: último '.' ou ',' antes de 1-2 dígitos finais
     m = re.search(r'([.,])(?=\d{1,2}$)', s_clean)
     if m:
         sep = m.group(1)
         int_part, dec_part = s_clean.rsplit(sep, 1)
-        # limpa milhar na parte inteira
+        # extrai só dígitos de cada parte
         int_digits = re.sub(r'[^\d]', '', int_part)
         dec_digits = re.sub(r'[^\d]', '', dec_part)
-        if not int_digits:
-            int_digits = '0'
+
+        # ===== Caso especial: "<x>.000,00" virou int_digits="x0000" e dec_digits="00" =====
+        # Se todos os decimais forem zeros, e a parte inteira terminar em "000",
+        # provavelmente era só um grouping errado: dividimos por 1 000.
+        if dec_digits.strip('0') == '' and int_digits.endswith('000') and len(int_digits) > 3:
+            return float(int(int_digits) // 1000)
+
+        # caso normal: recombina inteiro + decimal
         try:
             return float(int_digits) + float(f"0.{dec_digits}")
         except:
             return np.nan
-    else:
-        # sem decimal claro: junta todos dígitos
-        all_digits = re.sub(r'[^\d]', '', s_clean)
-        try:
-            return float(all_digits)
-        except:
-            return np.nan
+
+    # se não achou separador decimal, trata tudo como inteiro
+    all_digits = re.sub(r'[^\d]', '', s_clean)
+    try:
+        return float(all_digits)
+    except:
+        return np.nan
+
 
 
 
