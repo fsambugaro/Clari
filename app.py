@@ -75,19 +75,31 @@ def parse_number(val):
     s = str(val).strip()
     if s == '' or s.lower() == 'nan':
         return np.nan
-    # remove tudo que não seja dígito, ponto ou vírgula
+
+    # ================================
+    # 1) Captura o caso "54.000,00" → era só "54"
+    #    strings do tipo "<x>.000,00" onde <x> tem <= 2 dígitos
+    #    e termina em ",00" vamos reduzir para "<x>"
+    m = re.match(r'^(\d{1,2})\.000,00$', s)
+    if m:
+        return float(m.group(1))
+
+    # 2) remove tudo que não seja dígito, ponto ou vírgula
     s = re.sub(r'[^\d\.,]', '', s)
-    # se tiver ponto E vírgula: formato europeu (milhar='.', decimal=',')
+
+    # 3) os demais casos continuam iguais:
+    #    se tiver ponto E vírgula: formato europeu
     if '.' in s and ',' in s:
         s = s.replace('.', '').replace(',', '.')
-    # se só tiver vírgula: decimal brasileiro
+    #    se só tiver vírgula: decimal brasileiro
     elif ',' in s:
         s = s.replace(',', '.')
-    # senão assume ponto decimal americano
+    #    senão assume decimal americano
     try:
         return float(s)
     except:
         return np.nan
+
 
 
 
