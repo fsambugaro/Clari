@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import re
 import plotly.express as px
 import os
 import io
@@ -68,7 +69,28 @@ if not os.path.isdir(DIR):
 def list_csv_files():
     return sorted([f for f in os.listdir(DIR) if f.lower().endswith('.csv')])
 
+
 # 5) Carrega e sanitiza dados
+def parse_number(val):
+    s = str(val).strip()
+    if s == '' or s.lower() == 'nan':
+        return np.nan
+    # remove tudo que não seja dígito, ponto ou vírgula
+    s = re.sub(r'[^\d\.,]', '', s)
+    # se tiver ponto E vírgula: formato europeu (milhar='.', decimal=',')
+    if '.' in s and ',' in s:
+        s = s.replace('.', '').replace(',', '.')
+    # se só tiver vírgula: decimal brasileiro
+    elif ',' in s:
+        s = s.replace(',', '.')
+    # senão assume ponto decimal americano
+    try:
+        return float(s)
+    except:
+        return np.nan
+
+
+
 def load_data(path):
     df = pd.read_csv(os.path.join(DIR, path))
     df.columns = df.columns.str.strip()
@@ -76,19 +98,17 @@ def load_data(path):
     df['Sales Team Member'] = df.get('Sales Team Member', df.get('Owner', '')).astype(str).str.strip()
     df['Stage'] = df['Stage'].astype(str).str.strip()
     df['Close Date'] = pd.to_datetime(df['Close Date'], errors='coerce')
-    df['Total New ASV'] = (
-        df['Total New ASV'].astype(str)
-          .str.replace(r"[\$,]", '', regex=True)
-          .astype(float)
-    )
-    # Converte campos numéricos adicionais para float, para alinhamento correto
-    for col in ['Renewal Bookings','Total DMe Est HASV','Total Attrition','Total TSV','Total Renewal ASV']:
+
+        # converte corretamente misturas de formatos US/BR
+    df['Total New ASV'] = df['Total New ASV'].apply(parse_number)
+
+    for col in ['Renewal Bookings','Total DMe Est HASV',
+                'Total Attrition','Total TSV','Total Renewal ASV']:
         if col in df.columns:
-            df[col] = (
-                df[col].astype(str)
-                     .str.replace(r"[\$,]", '', regex=True)
-                     .astype(float)
-            )
+            df[col] = df[col].apply(parse_number)
+
+
+
     if 'Sub Territory' in df.columns:
         df['Region'] = df['Sub Territory'].astype(str).apply(
             lambda x: 'Hispanic' if 'Hispanic' in x else ('Brazil' if 'Brazil' in x else 'Other')
