@@ -1,39 +1,12 @@
-import os
-import logging
 import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+import os
 import io
-import json
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
 
-# 1) Configuração da página — deve vir antes de qualquer st.*
-st.set_page_config(page_title="Dashboard Pipeline LATAM", layout="wide")
-
-# 2) Definições de caminho
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DIR = os.path.join(BASE_DIR, "Data")
-
-# 2.1) Definição do arquivo de commits (precisa antes de qualquer uso)
-SAVE_FILE = os.path.join(DIR, "committed_ids_by_member.json")
-
-# 3) Configuração de logging
-LOG_FILE = os.path.join(DIR, "debug_commits.log")
-os.makedirs(DIR, exist_ok=True)
-logging.basicConfig(
-    filename=LOG_FILE,
-    filemode='a',
-    format='%(asctime)s %(levelname)s:%(message)s',
-    level=logging.DEBUG
-)
-
-# 4) Verifica existência da pasta Data
-if not os.path.isdir(DIR):
-    st.error(f"🚨 Pasta de dados não encontrada: {DIR}")
-    st.stop()
-
-# 5) CSS para tema escuro e AgGrid
+# formata números no estilo US (com vírgulas de milhar e 2 casas decimais)
 us_format = JsCode(
     "function(params){"
     "  return params.value!=null"
@@ -42,11 +15,15 @@ us_format = JsCode(
     "    : '';"
     "}"
 )
+
+# 1) Configurações iniciais
+st.set_page_config(page_title="Dashboard Pipeline LATAM", layout="wide")
+# CSS para tema escuro geral e AgGrid
 st.markdown(
     """
     <style>
-    html, body, [data-testid="stAppViewContainer"], .block-container,
-    [data-testid="stSidebar"], header, [data-testid="stToolbar"] {
+    html, body, [data-testid=\"stAppViewContainer\"], .block-container,
+    [data-testid=\"stSidebar\"], header, [data-testid=\"stToolbar\"] {
         background-color: #111111 !important;
         color: #FFFFFF !important;
     }
@@ -54,6 +31,7 @@ st.markdown(
         background-color: #222222 !important;
         color: #FFFFFF !important;
     }
+    /* AgGrid tema escuro com fundo preto e texto branco */
     .ag-theme-streamlit-dark .ag-root-wrapper,
     .ag-theme-streamlit-dark .ag-header,
     .ag-theme-streamlit-dark .ag-cell,
@@ -65,20 +43,32 @@ st.markdown(
         background-color: #111111 !important;
     }
     </style>
-    """,
-    unsafe_allow_html=True
+    """, unsafe_allow_html=True
 )
 
-
-# 6) Título
+# 2) Título
 st.title("📊 LATAM Pipeline Dashboard")
 
-# 7) Carregamento dos CSVs na subpasta Data
+import os
+import streamlit as st  # já deve estar importado
+
+# 3) Caminho dos CSVs — busca na subpasta "Data" ao lado do app.py
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DIR = os.path.join(BASE_DIR, "Data")
+
+# Se a pasta não existir, interrompe com mensagem amigável
+if not os.path.isdir(DIR):
+    st.error(f"🚨 Pasta de dados não encontrada: {DIR}")
+    st.stop()
+
+
+
+# 4) Lista de CSVs disponíveis
 @st.cache_data
 def list_csv_files():
     return sorted([f for f in os.listdir(DIR) if f.lower().endswith('.csv')])
 
-# 8) Carrega e sanitiza dados
+# 5) Carrega e sanitiza dados
 def load_data(path):
     df = pd.read_csv(os.path.join(DIR, path))
     df.columns = df.columns.str.strip()
@@ -91,7 +81,7 @@ def load_data(path):
           .str.replace(r"[\$,]", '', regex=True)
           .astype(float)
     )
-    # Converte campos numéricos adicionais para float
+    # Converte campos numéricos adicionais para float, para alinhamento correto
     for col in ['Renewal Bookings','Total DMe Est HASV','Total Attrition','Total TSV','Total Renewal ASV']:
         if col in df.columns:
             df[col] = (
@@ -107,7 +97,7 @@ def load_data(path):
         df['Region'] = 'Other'
     return df
 
-# 9) Seleção de CSV
+# 6) Seleção de CSV
 st.sidebar.header('📂 Select CSV file')
 file = st.sidebar.selectbox('File:', [''] + list_csv_files())
 if not file:
@@ -115,8 +105,6 @@ if not file:
     st.stop()
 
 df = load_data(file)
-full_df = df.copy()  # backup do dataset completo, antes dos filtros
-
 
 # 7) Filtros básicos
 st.sidebar.header('🔍 Filtros')
@@ -260,6 +248,12 @@ if applied_filters:
     st.markdown("**Filtros aplicados:** " + " | ".join(applied_filters))
     # Download filtered data (CSV)
     csv_data = df.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        '⬇️ Download Filtered Data (CSV)',
+        csv_data,
+        file_name=f'pipeline_{file.replace(".csv","")}.csv',
+        mime='text/csv'
+    )
 
 # Helper to download plot as HTML
 def download_html(fig, name):
@@ -331,108 +325,77 @@ for col, title in extras:
         download_html(fig, title.replace(' ', '_').lower())
 
 
+# 15) Seleção e exibição de Committed Deals
+st.markdown('---')
+st.header('✅ Upside deals to reach commit')
 
-# 15) Seleção e exibição de Committed Deals por vendedor
-st.markdown("---")
-st.header("✅ Ajustar Committed Deals")
+# 1) DataFrame base só com os Upside deals ainda abertos
+commit_disp = df[
+    (df.get('Forecast Indicator','') == 'Upside') &
+    (~df['Stage'].isin(['Closed - Booked', '07 - Execute to Close', '02 - Prospect']))
+][[
+    'Deal Registration ID',
+    'Opportunity',
+    'Sales Team Member',
+    'Stage',
+    'Close Date',
+    'Total New ASV',
+    'Next Steps'
+]].copy()
 
-SAVE_FILE = os.path.join(DIR, "committed_ids_by_member.json")
+commit_disp['Next Steps'] = commit_disp['Next Steps'].astype(str).str.slice(0,50)
 
-# 1) Inicializa ou carrega estado
-if "commit_ids_by_member" not in st.session_state:
-    try:
-        with open(SAVE_FILE, "r") as f:
-            st.session_state.commit_ids_by_member = json.load(f)
-    except FileNotFoundError:
-        st.session_state.commit_ids_by_member = {}
-
-current_member = sel_member if sel_member != "Todos" else "__ALL__"
-prev_ids = st.session_state.commit_ids_by_member.get(current_member, [])
-
-# 2) Upload / Download de IDs
-st.subheader("📥 Upload / 📤 Download de lista de Commit IDs")
-col1, col2 = st.columns(2)
-with col1:
-    uploaded = st.file_uploader("Upload CSV com Deal Registration ID", type="csv", key="upload_commits_15")
-    if uploaded:
-        df_u = pd.read_csv(uploaded, dtype=str)
-        ids = df_u["Deal Registration ID"].dropna().astype(str).unique().tolist()
-        st.session_state.commit_ids_by_member[current_member] = ids
-        with open(SAVE_FILE, "w") as f:
-            json.dump(st.session_state.commit_ids_by_member, f)
-        st.success(f"Importados {len(ids)} IDs para {current_member}.")
-        prev_ids = ids
-with col2:
-    if prev_ids:
-        buf = io.StringIO()
-        pd.DataFrame({"Deal Registration ID": prev_ids}).to_csv(buf, index=False)
-        st.download_button("⬇️ Download lista atual",
-                           data=buf.getvalue(),
-                           file_name=f"commit_ids_{current_member}.csv",
-                           mime="text/csv")
-
-# 3) Prepara DataFrame com coluna de seleção
-df = full_df.copy()
-cols = ["Deal Registration ID", "Opportunity", "Total New ASV", "Stage", "Forecast Indicator"]
-df = df[df["Forecast Indicator"].isin(["Upside", "Upside - Targeted"])][cols]
-# Ajusta tipo
-df["Deal Registration ID"] = df["Deal Registration ID"].astype(str)
-# Marca os persistidos
-df["selected"] = df["Deal Registration ID"].isin(prev_ids)
-
-# 4) Exibe Experimental Data Editor para seleção múltipla
-edited = st.experimental_data_editor(
-    df,
-    num_rows="dynamic",
-    use_checkbox=True,
-    hide_index=True,
-    key=f"editor_commits_{current_member}"
+# 2) Exibe AgGrid para selecionar múltiplos Upside deals
+gb = GridOptionsBuilder.from_dataframe(commit_disp)
+gb.configure_default_column(cellStyle={'color':'white','backgroundColor':'#000000'})
+gb.configure_column(
+    'Total New ASV',
+    type=['numericColumn','numberColumnFilter'],
+    cellStyle={'textAlign':'right','color':'white','backgroundColor':'#000000'},
+    cellRenderer=us_format
+)
+gb.configure_selection(selection_mode='multiple', use_checkbox=True)
+resp = AgGrid(
+    commit_disp,
+    gridOptions=gb.build(),
+    theme='streamlit-dark',
+    update_mode=GridUpdateMode.SELECTION_CHANGED,
+    allow_unsafe_jscode=True,
+    height=300,
+    key='upside_deals_grid'
 )
 
-# 5) Extrai seleção e persiste) Extrai seleção e persiste
-sel_ids = edited.loc[edited["selected"], "Deal Registration ID"].tolist()
-st.session_state.commit_ids_by_member[current_member] = sel_ids
-with open(SAVE_FILE, "w") as f:
-    json.dump(st.session_state.commit_ids_by_member, f)
+# 3) Monta o DataFrame dos selecionados
+raw = resp['selected_rows']
+if isinstance(raw, pd.DataFrame):
+    sel = raw.to_dict('records')
+else:
+    sel = raw or []
 
-# 6) Exibe resultado final
-df_final = full_df[full_df["Deal Registration ID"].isin(sel_ids)].copy()
-tot = df_final["Total New ASV"].sum()
-st.markdown(f"---\n### 🚀 Upside deals to reach the commit — Total New ASV: {tot:,.2f}")
-st.dataframe(df_final, use_container_width=True)
+commit_df = pd.DataFrame(sel, columns=commit_disp.columns)
 
-csv_out = df_final.to_csv(index=False).encode("utf-8")
-st.download_button("⬇️ Download Committed Deals (CSV)",
-                   data=csv_out,
-                   file_name=f"committed_deals_{current_member}.csv",
-                   mime="text/csv")
+# 4) Soma de Total New ASV
+total_asv = commit_df['Total New ASV'].sum()
 
+# 5) Título com soma dinâmica
+st.header(f"Upside deals to reach the commit — Total New ASV: {total_asv:,.2f}")
 
-
-
-
-#16 DEBUG (cole isto após o seu bloco #15)
-#if os.path.exists(LOG_FILE):
-#    with open(LOG_FILE, "r") as f:
-#        lines = f.readlines()
-#    # filtra apenas as linhas com nossas tags de debug
-#    tags = [
-#        "resp_rows raw",
-#        "current_selected",
-#        "visible_ids",
-#        "prev_ids",
-#        "hidden_prev",
-#        "all_ids",
-#        "commit_df IDs"
-#    ]
-#    filtered = [l for l in lines if any(tag in l for tag in tags)]
-#    st.subheader("📝 Entradas relevantes do debug_commits.log")
-#    if filtered:
-#        st.code("".join(filtered[-20:]))
-#    else:
-#        st.info("Nenhuma entrada de debug encontrada ainda.")
-#else:
-#    st.info("Arquivo de log não existe: " + LOG_FILE)
+# 6) Exibe tabela estilizada e botão de download
+st.dataframe(
+    commit_df
+      .style
+      .format({'Total New ASV':'${:,.2f}'})
+      .set_properties(subset=['Total New ASV'], **{'text-align':'right'}),
+    use_container_width=True
+)
+csv_upside = commit_df.to_csv(index=False).encode('utf-8')
+st.download_button(
+    '⬇️ Download Upside Deals (CSV)',
+    data=csv_upside,
+    file_name='upside_deals.csv',
+    mime='text/csv',
+    key='download_upside_deals'
+)
 
 
 # 16) Dados Brutos e ficha detalhada e ficha detalhada
