@@ -20,22 +20,21 @@ authenticator = stauth.Authenticate(
     config['cookie']['expiry_days']
 )
 
-
 # 1) Renderiza o formulário no main (retorno sempre será None)
 authenticator.login(location='main')
 
-# 2) Checa o estado de autenticação guardado em session_state
-if st.session_state.get('authentication_status') is False:
+# Lê o resultado do login do session_state
+auth_status = st.session_state.get('authentication_status')
+if auth_status is False:
     st.error('Usuário ou senha inválidos')
     st.stop()
-elif st.session_state.get('authentication_status') is None:
+elif auth_status is None:
     st.info('Por favor, faça login')
     st.stop()
 
-# 3) Agora recupera os valores diretamente do session_state
+# Login OK: recupera usuário
 name     = st.session_state['name']
 username = st.session_state['username']
-# (opcional) exibe um “Bem-vindo”
 st.sidebar.success(f"Bem-vindo, {name} 👋")
 
 
