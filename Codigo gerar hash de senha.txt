@@ -1,0 +1,4 @@
+cd /Users/fsambugaro/Documents/Clari
+
+
+source venv/bin/activate

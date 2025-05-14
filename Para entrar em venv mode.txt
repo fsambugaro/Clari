@@ -1,4 +1,13 @@
-cd /Users/fsambugaro/Documents/Clari
+Fabio
 
+from bcrypt import hashpw, gensalt
+pwd = "Cep@04530$"
+hashed = hashpw(pwd.encode('utf-8'), gensalt())
+print(hashed.decode())
 
-source venv/bin/activate
+Outros
+
+from bcrypt import hashpw, gensalt
+pwd = "Adobe@BR01"
+hashed = hashpw(pwd.encode('utf-8'), gensalt())
+print(hashed.decode())
