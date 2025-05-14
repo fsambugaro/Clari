@@ -8,11 +8,11 @@ import yaml
 import streamlit_authenticator as stauth
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
 
-
 # — Carrega o YAML de credenciais —
 with open('credentials.yaml') as f:
     config = yaml.safe_load(f)
 
+# — Inicializa o autenticador —
 authenticator = stauth.Authenticate(
     config['credentials'],
     config['cookie']['name'],
@@ -20,10 +20,10 @@ authenticator = stauth.Authenticate(
     config['cookie']['expiry_days']
 )
 
-# 1) Renderiza o formulário no main (retorno sempre será None)
+# — Exibe o formulário de login UMA vez, no main —
 authenticator.login(location='main')
 
-# Lê o resultado do login do session_state
+# — Lê o status de autenticação do session_state —
 auth_status = st.session_state.get('authentication_status')
 if auth_status is False:
     st.error('Usuário ou senha inválidos')
@@ -32,23 +32,14 @@ elif auth_status is None:
     st.info('Por favor, faça login')
     st.stop()
 
-# Login OK: recupera usuário
+# — Login OK: extrai name e username do session_state —
 name     = st.session_state['name']
 username = st.session_state['username']
 st.sidebar.success(f"Bem-vindo, {name} 👋")
 
+# — Agora sim: configura página e injeta CSS —
+st.set_page_config(page_title="Dashboard Pipeline LATAM", layout="wide")
 
-if authentication_status is False:
-    st.error('Usuário ou senha inválidos')
-    st.stop()
-elif authentication_status is None:
-    st.info('Por favor, faça login')
-    st.stop()
-
-# — Usuário autenticado! —  
-st.sidebar.success(f"Bem-vindo, {name} 👋")
-
-# formata números no estilo US (com vírgulas de milhar e 2 casas decimais)
 us_format = JsCode(
     "function(params){"
     "  return params.value!=null"
@@ -58,35 +49,34 @@ us_format = JsCode(
     "}"
 )
 
-# 1) Configurações iniciais
-st.set_page_config(page_title="Dashboard Pipeline LATAM", layout="wide")
-# CSS para tema escuro geral e AgGrid
 st.markdown(
     """
     <style>
-    html, body, [data-testid=\"stAppViewContainer\"], .block-container,
-    [data-testid=\"stSidebar\"], header, [data-testid=\"stToolbar\"] {
-        background-color: #111111 !important;
-        color: #FFFFFF !important;
-    }
-    .stButton>button, .stSelectbox>div>div, .stMultiselect>div>div {
-        background-color: #222222 !important;
-        color: #FFFFFF !important;
-    }
-    /* AgGrid tema escuro com fundo preto e texto branco */
-    .ag-theme-streamlit-dark .ag-root-wrapper,
-    .ag-theme-streamlit-dark .ag-header,
-    .ag-theme-streamlit-dark .ag-cell,
-    .ag-theme-streamlit-dark .ag-header-cell {
-        background-color: #000000 !important;
-        color: #FFFFFF !important;
-    }
-    .ag-theme-streamlit-dark .ag-header-cell {
-        background-color: #111111 !important;
-    }
+      html, body, [data-testid="stAppViewContainer"], .block-container,
+      [data-testid="stSidebar"], header, [data-testid="stToolbar"] {
+          background-color: #111111 !important;
+          color: #FFFFFF !important;
+      }
+      .stButton>button, .stSelectbox>div>div, .stMultiselect>div>div {
+          background-color: #222222 !important;
+          color: #FFFFFF !important;
+      }
+      /* AgGrid tema escuro com fundo preto e texto branco */
+      .ag-theme-streamlit-dark .ag-root-wrapper,
+      .ag-theme-streamlit-dark .ag-header,
+      .ag-theme-streamlit-dark .ag-cell,
+      .ag-theme-streamlit-dark .ag-header-cell {
+          background-color: #000000 !important;
+          color: #FFFFFF !important;
+      }
+      .ag-theme-streamlit-dark .ag-header-cell {
+          background-color: #111111 !important;
+      }
     </style>
-    """, unsafe_allow_html=True
+    """,
+    unsafe_allow_html=True
 )
+
 
 # 2) Título
 st.title("📊 LATAM Pipeline Dashboard")
