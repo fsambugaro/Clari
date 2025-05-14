@@ -324,10 +324,10 @@ st.table(r[['Rank','Sales Team Member','Total New ASV']])
 
 # 14) Gráficos adicionais
 extras = [
-    ('Forecast Indicator','Pipeline por Forecast Indicator'),
-    ('Licensing Program Type','Pipeline por Licensing Program Type'),
-    ('Licensing Program','Pipeline por Licensing Program'),
-    ('Major OLPG1','Pipeline por Major OLPG1')
+    ('Forecast Indicator','Pipeline by Forecast Indicator'),
+    ('Licensing Program Type','Pipeline by Licensing Program Type'),
+    ('Licensing Program','Pipeline by Licensing Program'),
+    ('Major OLPG1','Pipeline by Product')
 ]
 for col, title in extras:
     if col in df.columns:
