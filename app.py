@@ -1,4 +1,7 @@
 import streamlit as st
+# — Agora sim: configura página e injeta CSS —
+st.set_page_config(page_title="Dashboard Pipeline LATAM", layout="wide")
+
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -37,8 +40,6 @@ name     = st.session_state['name']
 username = st.session_state['username']
 st.sidebar.success(f"Bem-vindo, {name} 👋")
 
-# — Agora sim: configura página e injeta CSS —
-st.set_page_config(page_title="Dashboard Pipeline LATAM", layout="wide")
 
 us_format = JsCode(
     "function(params){"
