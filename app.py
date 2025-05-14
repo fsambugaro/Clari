@@ -263,7 +263,7 @@ if 'sel_state' in locals() and sel_state != 'Todos': applied_filters.append(f"St
 # Filtro EDU
 if edu_choice != 'All': applied_filters.append(f"Filtro EDU: {edu_choice}")
 if applied_filters:
-    st.markdown("**Filtros aplicados:** " + " | ".join(applied_filters))
+    st.markdown("**Applied filters:** " + " | ".join(applied_filters))
     # Download filtered data (CSV)
     csv_data = df.to_csv(index=False).encode('utf-8')
     st.download_button(
