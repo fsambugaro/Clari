@@ -235,7 +235,7 @@ if 'Days Since Next Steps Modified' in df.columns:
         include_lowest=True
     )
     sel_dg = st.sidebar.selectbox(
-        'Days since Next Steps',
+        'Dias desde Next Steps',
         ['Todos'] + labels,
         key='filter_days_since_next_steps'
     )
@@ -249,6 +249,11 @@ if 'Days Since Next Steps Modified' in df.columns:
 if 'Deal Registration ID' in df.columns:
     sel_drid = st.sidebar.selectbox('Deal Registration ID', ['Todos'] + sorted(df['Deal Registration ID'].dropna().unique()))
     if sel_drid != 'Todos': df = df[df['Deal Registration ID'] == sel_drid]
+if 'Days Since Next Steps Modified' in df.columns:
+    labels = ['<=7 dias', '8-14 dias', '15-30 dias', '>30 dias']
+    df['DaysGroup'] = pd.cut(df['Days Since Next Steps Modified'], bins=[0,7,14,30,float('inf')], labels=labels)
+    sel_dg = st.sidebar.selectbox('Dias desde Next Steps', ['Todos'] + labels)
+    if sel_dg != 'Todos': df = df[df['DaysGroup'] == sel_dg]
 if 'Licensing Program Type' in df.columns:
     sel_lpt = st.sidebar.selectbox('Licensing Program Type', ['Todos'] + sorted(df['Licensing Program Type'].dropna().unique()))
     if sel_lpt != 'Todos': df = df[df['Licensing Program Type'] == sel_lpt]
