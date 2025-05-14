@@ -5,6 +5,7 @@ import plotly.express as px
 import os
 import io
 import yaml
+import streamlit_authenticator as stauth
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
 
 
