@@ -1,6 +1,6 @@
 import streamlit as st
 # — Agora sim: configura página e injeta CSS —
-st.set_page_config(page_title="Dashboard Pipeline LATAM", layout="wide")
+st.set_page_config(page_title="Dashboard Pipeline LATAM") #, layout="wide"
 
 import pandas as pd
 import numpy as np
@@ -242,13 +242,7 @@ if 'Days Since Next Steps Modified' in df.columns:
     if sel_dg != 'Todos':
         df = df[df['DaysGroup'] == sel_dg]
 
-# ... siga com os demais filtros abaixo ...
 
-
-
-if 'Deal Registration ID' in df.columns:
-    sel_drid = st.sidebar.selectbox('Deal Registration ID', ['Todos'] + sorted(df['Deal Registration ID'].dropna().unique()))
-    if sel_drid != 'Todos': df = df[df['Deal Registration ID'] == sel_drid]
 if 'Licensing Program Type' in df.columns:
     sel_lpt = st.sidebar.selectbox('Licensing Program Type', ['Todos'] + sorted(df['Licensing Program Type'].dropna().unique()))
     if sel_lpt != 'Todos': df = df[df['Licensing Program Type'] == sel_lpt]
