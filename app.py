@@ -81,8 +81,6 @@ st.markdown(
 # 2) Título
 st.title("📊 LATAM Pipeline Dashboard")
 
-import os
-import streamlit as st  # já deve estar importado
 
 # 3) Caminho dos CSVs — busca na subpasta "Data" ao lado do app.py
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -147,23 +145,7 @@ csv_type    = os.path.splitext(file)[0]
 # … depois de df = load_data(file) …
 csv_type = os.path.splitext(file)[0]
 
-# ←── A partir daqui, substitua o commit_file fixo pela versão por usuário ──→
-user = username  # vem do streamlit-authenticator
-user_dir = os.path.join(BASE_DIR, "Data", user)
-os.makedirs(user_dir, exist_ok=True)
 
-commit_file = os.path.join(
-    user_dir,
-    f"committed_deals_{csv_type}.csv"
-)
-
-# Leitura inicial (session_state)
-if 'committed_deals' not in st.session_state:
-    if os.path.exists(commit_file):
-        st.session_state.committed_deals = pd.read_csv(commit_file)
-    else:
-        st.session_state.committed_deals = pd.DataFrame(columns=commit_disp.columns)
-# ←─────────────────────────────────────────────────────────────────────────→
 
 # … daí em diante vem todo o seu bloco 15 (seleção, merge e gravação) …
 
@@ -402,6 +384,22 @@ for col, title in extras:
 st.markdown('---')
 st.header(f'✅ Upside deals to reach commit — {csv_type}')
 
+# 01 ── Início isolamento por usuário ──
+user_dir   = os.path.join(BASE_DIR, "Data", username)
+os.makedirs(user_dir, exist_ok=True)
+commit_file = os.path.join(user_dir, f"committed_deals_{csv_type}.csv")
+
+# 02 Inicializa commits salvos em sessão (ainda sem saber as colunas)
+if 'committed_deals' not in st.session_state:
+    if os.path.exists(commit_file):
+        st.session_state.committed_deals = pd.read_csv(commit_file)
+    else:
+        # placeholder vazio — vamos ajustar as colunas depois
+        st.session_state.committed_deals = pd.DataFrame()
+# ── Fim isolamento por usuário ──
+
+
+
 # 1) DataFrame base só com os Upside deals ainda abertos
 commit_disp = df[
     df['Forecast Indicator'].fillna('').isin(['Upside', 'Upside - Targeted']) &
@@ -420,6 +418,11 @@ commit_disp = df[
     'Next Steps'
 ]].copy()
 commit_disp['Next Steps'] = commit_disp['Next Steps'].astype(str).str.slice(0,50)
+
+# Se era DataFrame vazio, preencha agora com as colunas corretas
+if st.session_state.committed_deals.empty:
+    st.session_state.committed_deals = pd.DataFrame(columns=commit_disp.columns)
+
 
 # 2) Inicializa commits salvos em sessão (com as colunas de commit_disp)
 if 'committed_deals' not in st.session_state:
