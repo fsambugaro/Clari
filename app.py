@@ -22,7 +22,11 @@ authenticator = stauth.Authenticate(
 
 
 # — Exibe o formulário de login —
-name, authentication_status, username = authenticator.login('Login', 'main')
+name, authentication_status, username = authenticator.login(
+    label_username='Login',       # rótulo do campo user (opcional)
+    label_password='Senha',       # rótulo do campo password (opcional)
+    location='main'               # onde renderizar: 'main', 'sidebar' ou 'unrendered'
+)
 
 if authentication_status is False:
     st.error('Usuário ou senha inválidos')
