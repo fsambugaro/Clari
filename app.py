@@ -58,7 +58,7 @@ DIR = os.path.join(BASE_DIR, "Data")
 
 # Se a pasta não existir, interrompe com mensagem amigável
 if not os.path.isdir(DIR):
-    st.error(f"🚨 Pasta de dados não encontrada: {DIR}")
+    st.error(f"🚨 Data folder not found: {DIR}")
     st.stop()
 
 
@@ -125,7 +125,7 @@ else:
 
 
 # 7) Filtros básicos
-st.sidebar.header('🔍 Filtros')
+st.sidebar.header('🔍 Filters')
 # Sales Team Member
 tmembers = ['Todos'] + sorted(df['Sales Team Member'].unique())
 sel_member = st.sidebar.selectbox('Sales Team Member', tmembers)
@@ -147,7 +147,7 @@ if sel_region != 'Todos' and 'Sub Territory' in df.columns:
 
 
 # 9) Filtros adicionais personalizados
-st.sidebar.header('🔧 Filtros adicionais')
+st.sidebar.header('🔧 Aditional Filters')
 
 # --- 9.1) Fiscal Quarter
 if 'Fiscal Quarter' in df.columns:
@@ -280,7 +280,7 @@ def download_html(fig, name):
     st.download_button(f'⬇️ Download {name} (HTML)', buf.getvalue(), file_name=f'{name}.html', mime='text/html')
 
 # 10) Pipeline por Fase
-st.header('🔍 Pipeline por Fase')
+st.header('🔍 Pipeline Stage')
 order = [
     '02 - Prospect', '03 - Opportunity Qualification', '04 - Circle of Influence','05 - Solution Definition and Validation',
     '06 - Customer Commit', '07 - Execute to Close', 'Closed - Booked'
@@ -296,7 +296,7 @@ st.plotly_chart(fig, use_container_width=True, key='pipeline_stage')
 download_html(fig, 'pipeline_by_stage')
 
 # 11) Pipeline Semanal
-st.header('📈 Pipeline Semanal')
+st.header('📈 Weekly Pipeline')
 dfw = df.dropna(subset=['Close Date']).copy()
 dfw['Week'] = dfw['Close Date'].dt.to_period('W').dt.to_timestamp()
 weekly = dfw.groupby('Week')['Total New ASV'].sum().reset_index()
@@ -306,7 +306,7 @@ st.plotly_chart(fig2, use_container_width=True, key='pipeline_weekly')
 download_html(fig2, 'pipeline_weekly')
 
 # 12) Pipeline Mensal
-st.header('📆 Pipeline Mensal')
+st.header('📆 Monthly Pipeline')
 mon = dfw.copy()
 mon['Month'] = mon['Close Date'].dt.to_period('M').dt.to_timestamp()
 monthly = mon.groupby('Month')['Total New ASV'].sum().reset_index()
@@ -316,7 +316,7 @@ st.plotly_chart(fig3, use_container_width=True, key='pipeline_monthly')
 download_html(fig3, 'pipeline_monthly')
 
 # 13) Ranking de Vendedores
-st.header('🏆 Ranking de Vendedores')
+st.header('🏆 Sales Team Ranking')
 r = df.groupby('Sales Team Member')['Total New ASV'].sum().reset_index().sort_values('Total New ASV', ascending=False)
 r['Rank'] = range(1, len(r) + 1)
 r['Total New ASV'] = r['Total New ASV'].map('${:,.2f}'.format)
@@ -439,7 +439,7 @@ if not commit_df.empty:
 
 # 8) Editor in-place dos Committed Deals já persistidos
 st.markdown('---')
-st.subheader('✏️ Editar Committed Deals (altere ou exclua linhas)')
+st.subheader('✏️ Edit Committed Deals')
 
 edited_commits = st.data_editor(
     st.session_state.committed_deals,
@@ -468,7 +468,7 @@ st.download_button(
 
 
 # 16) Dados Brutos e ficha detalhada e ficha detalhada
-st.header('📋 Dados Brutos')
+st.header('📋 Raw Data')
 disp = df.copy()
 gb = GridOptionsBuilder.from_dataframe(disp)
 gb.configure_default_column(cellStyle={'color':'white','backgroundColor':'#000000'})
