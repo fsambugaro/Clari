@@ -4,34 +4,7 @@ import numpy as np
 import plotly.express as px
 import os
 import io
-import yaml
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
-
-
-# — Carrega o YAML de credenciais —
-with open('credentials.yaml') as f:
-    config = yaml.safe_load(f)
-
-authenticator = stauth.Authenticate(
-    config['credentials'],
-    config['cookie']['name'],
-    config['cookie']['key'],
-    config['cookie']['expiry_days'],
-    config.get('preauthorized', {})
-)
-
-# — Exibe o formulário de login —
-name, authentication_status, username = authenticator.login('Login', 'main')
-
-if authentication_status is False:
-    st.error('Usuário ou senha inválidos')
-    st.stop()
-elif authentication_status is None:
-    st.info('Por favor, faça login')
-    st.stop()
-
-# — Usuário autenticado! —  
-st.sidebar.success(f"Bem-vindo, {name} 👋")
 
 # formata números no estilo US (com vírgulas de milhar e 2 casas decimais)
 us_format = JsCode(
@@ -138,30 +111,7 @@ df = load_data(file)
 
 # Deriva o tipo do CSV e define um commit_file específico
 csv_type    = os.path.splitext(file)[0]  
-
-# … depois de df = load_data(file) …
-csv_type = os.path.splitext(file)[0]
-
-# ←── A partir daqui, substitua o commit_file fixo pela versão por usuário ──→
-user = username  # vem do streamlit-authenticator
-user_dir = os.path.join(BASE_DIR, "Data", user)
-os.makedirs(user_dir, exist_ok=True)
-
-commit_file = os.path.join(
-    user_dir,
-    f"committed_deals_{csv_type}.csv"
-)
-
-# Leitura inicial (session_state)
-if 'committed_deals' not in st.session_state:
-    if os.path.exists(commit_file):
-        st.session_state.committed_deals = pd.read_csv(commit_file)
-    else:
-        st.session_state.committed_deals = pd.DataFrame(columns=commit_disp.columns)
-# ←─────────────────────────────────────────────────────────────────────────→
-
-# … daí em diante vem todo o seu bloco 15 (seleção, merge e gravação) …
-
+commit_file = os.path.join(BASE_DIR, "Data", f"committed_deals_{csv_type}.csv")
 
 # limpa estado se trocou de CSV
 if 'current_csv_type' not in st.session_state:
@@ -395,7 +345,7 @@ for col, title in extras:
 
 # 15) Seleção e exibição de Committed Deals
 st.markdown('---')
-st.header(f'✅ Upside deals to reach commit — {csv_type}')
+st.header(f'✅ Upside deals to reach commit ')
 
 # 1) DataFrame base só com os Upside deals ainda abertos
 commit_disp = df[
