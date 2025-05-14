@@ -5,3 +5,5 @@ numpy
 plotly
 python-decouple
 pyyaml
+streamlit-authenticator[bcrypt]
+bcrypt
