@@ -17,9 +17,9 @@ authenticator = stauth.Authenticate(
     config['credentials'],
     config['cookie']['name'],
     config['cookie']['key'],
-    config['cookie']['expiry_days'],
-    config.get('preauthorized', {})
+    config['cookie']['expiry_days']
 )
+
 
 # — Exibe o formulário de login —
 name, authentication_status, username = authenticator.login('Login', 'main')
