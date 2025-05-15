@@ -1,0 +1,27 @@
+Esse app foi feito no Vcode e chama App.py
+Para funcionar ele precisa dos arquivos em CSV exportados do Clari
+Eu uso a o app chamado Captura_reports_Clariok.command que fina no desktop para baixar automaticamente os reports, as vezes das problema no Fullyear e faço manualmente
+
+O ambiente que rodo o app.py se chama Streamlit junto con o GitHub. Tenho conta nos dois e estão conectados. 
+
+https://share.streamlit.io/
+
+https://github.com/fsambugaro/Clari
+
+
+Se precisar atualizar o App.py, após mudar o código, tem de atualizar o git hub e para isso uso.
+
+No Terminal:
+
+cd ~/Desktop
+./deploy_clari.sh
+
+E tem o arquivo deploy_clari.sh no desktop
+
+Para entrar no venv, ambiente aonde tem tudo instalado precisa 
+
+cd /Users/fsambugaro/Documents/Clari
+source venv/bin/activate
+
+
+

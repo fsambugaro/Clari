@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import os
 import time
 import datetime
@@ -127,14 +126,9 @@ def main():
     week = week_in_quarter(datetime.date.today())
     ts   = datetime.datetime.now().strftime("%Y%m%d_%H%M")
 
-    # —> Initialize Chrome using Homebrew-installed chromedriver
-    opts = Options()
-    opts.binary_location = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-    # opts.add_argument("--headless") # faz ocultar o clari na tela
-    opts.add_argument("--disable-gpu")
-
-    # assume chromedriver is in your PATH (via `brew install --cask chromedriver`)
-    driver = webdriver.Chrome(options=opts)
+    opts   = Options()
+    srv    = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=srv, options=opts)
 
     driver.get("https://app.clari.com/login")
     print("Faça login manualmente (email+Okta) e pressione Enter para continuar…")
@@ -145,6 +139,7 @@ def main():
         base_name = tpl.format(w=week)
         name, ext  = os.path.splitext(base_name)
         filename   = f"{name}_{ts}{ext}"
+        # Salva em Data/
         out_path   = os.path.join(DATA_PATH, filename)
 
         start = time.time()
