@@ -7,3 +7,4 @@ python-decouple
 pyyaml
 streamlit-authenticator[bcrypt]
 bcrypt
+requests
