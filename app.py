@@ -1,4 +1,7 @@
 import streamlit as st
+# — Agora sim: configura página e injeta CSS —
+st.set_page_config(page_title="Dashboard Pipeline LATAM") #, layout="wide"
+
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -8,32 +11,22 @@ import yaml
 import streamlit_authenticator as stauth
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
 
-# — Início do app —
-import streamlit as st
-import pandas as pd
-import numpy as np
-import plotly.express as px
-import os
-import io
-import yaml
-import streamlit_authenticator as stauth
-from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
-
-# — Carrega credenciais de login —
+# — Carrega o YAML de credenciais —
 with open('credentials.yaml') as f:
     config = yaml.safe_load(f)
+
 # — Inicializa o autenticador —
-creds = {"usernames": config.get("usernames", {})}
 authenticator = stauth.Authenticate(
-    creds,
+    config['credentials'],
     config['cookie']['name'],
     config['cookie']['key'],
-    config['cookie']['expiry_days'],
-    preauthorized=config.get('preauthorized', {})
+    config['cookie']['expiry_days']
 )
-# — Exibe o formulário de login UMA vez —
+
+# — Exibe o formulário de login UMA vez, no main —
 authenticator.login(location='main')
-# — Lê status de autenticação —
+
+# — Lê o status de autenticação do session_state —
 auth_status = st.session_state.get('authentication_status')
 if auth_status is False:
     st.error('Usuário ou senha inválidos')
@@ -41,18 +34,27 @@ if auth_status is False:
 elif auth_status is None:
     st.info('Por favor, faça login')
     st.stop()
-# — Login OK —
-name = st.session_state['name']
+
+# — Login OK: extrai name e username do session_state —
+name     = st.session_state['name']
 username = st.session_state['username']
 st.sidebar.success(f"Bem-vindo, {name} 👋")
 
-# 1) Configuração da página e CSS
-st.set_page_config(page_title="Dashboard Pipeline LATAM")  #, layout="wide"
+
+us_format = JsCode(
+    "function(params){"
+    "  return params.value!=null"
+    "    ? params.value.toLocaleString('en-US',"
+    "      {minimumFractionDigits:2,maximumFractionDigits:2})"
+    "    : '';"
+    "}"
+)
+
 st.markdown(
     """
     <style>
-      html, body, [data-testid=\"stAppViewContainer\"], .block-container,
-      [data-testid=\"stSidebar\"], header, [data-testid=\"stToolbar\"] {
+      html, body, [data-testid="stAppViewContainer"], .block-container,
+      [data-testid="stSidebar"], header, [data-testid="stToolbar"] {
           background-color: #111111 !important;
           color: #FFFFFF !important;
       }
@@ -72,12 +74,14 @@ st.markdown(
           background-color: #111111 !important;
       }
     </style>
-    """, unsafe_allow_html=True
+    """,
+    unsafe_allow_html=True
 )
+
 
 # 2) Título
 st.title("📊 LATAM Pipeline Dashboard")
-st.title("📊 LATAM Pipeline Dashboard")
+
 
 # 3) Caminho dos CSVs — busca na subpasta "Data" ao lado do app.py
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -88,15 +92,19 @@ if not os.path.isdir(DIR):
     st.error(f"🚨 Data folder not found: {DIR}")
     st.stop()
 
+
+
 # 4) Lista de CSVs disponíveis
 @st.cache_data
 def list_csv_files():
     return sorted([f for f in os.listdir(DIR) if f.lower().endswith('.csv')])
 
 # 5) Carrega e sanitiza dados
-
 def load_data(path):
     df = pd.read_csv(os.path.join(DIR, path))
+    # 0) Extrai o tipo do CSV (sem extensão) e define o arquivo de commits
+
+
     df.columns = df.columns.str.strip()
     df['Opportunity'] = df.get('Opportunity', df.get('Opportunity ID', ''))
     df['Sales Team Member'] = df.get('Sales Team Member', df.get('Owner', '')).astype(str).str.strip()
@@ -107,6 +115,7 @@ def load_data(path):
           .str.replace(r"[\$,]", '', regex=True)
           .astype(float)
     )
+    # Converte campos numéricos adicionais para float, para alinhamento correto
     for col in ['Renewal Bookings','Total DMe Est HASV','Total Attrition','Total TSV','Total Renewal ASV']:
         if col in df.columns:
             df[col] = (
@@ -122,21 +131,35 @@ def load_data(path):
         df['Region'] = 'Other'
     return df
 
-# 6) Seleção de CSV ou upload manual
-st.sidebar.header('📂 Fonte de dados')
-mode = st.sidebar.radio('Origem:', ['Do diretório Data', 'Upload manual'], index=0)
-if mode == 'Do diretório Data':
-    file = st.sidebar.selectbox('File:', [''] + list_csv_files())
-    if not file:
-        st.info('Selecione um CSV para continuar')
-        st.stop()
-    df = load_data(file)
+# 6) Seleção de CSV
+st.sidebar.header('📂 Select CSV file')
+file = st.sidebar.selectbox('File:', [''] + list_csv_files())
+if not file:
+    st.info('Selecione um CSV para continuar')
+    st.stop()
+
+df = load_data(file)
+
+# Deriva o tipo do CSV e define um commit_file específico
+csv_type    = os.path.splitext(file)[0]  
+
+# … depois de df = load_data(file) …
+csv_type = os.path.splitext(file)[0]
+
+
+
+# … daí em diante vem todo o seu bloco 15 (seleção, merge e gravação) …
+
+
+# limpa estado se trocou de CSV
+if 'current_csv_type' not in st.session_state:
+    st.session_state.current_csv_type = csv_type
 else:
-    uploaded = st.sidebar.file_uploader('Faça upload do CSV:', type='csv')
-    if not uploaded:
-        st.info('Faça upload de um arquivo CSV para continuar')
-        st.stop()
-    df = load_data(uploaded)
+    if st.session_state.current_csv_type != csv_type:
+        st.session_state.current_csv_type = csv_type
+        st.session_state.upside_grid_counter = 0
+        if 'committed_deals' in st.session_state:
+            del st.session_state['committed_deals']
 
 
 # 7) Filtros básicos
